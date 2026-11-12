@@ -2503,5 +2503,15 @@
         "at": "2026-11-12T11:02:06.764Z"
       }
     ]
+  },
+  "icmProbe": {
+    "note": "scripts/icm/probe.ts: one Teleporter message Fuji C-Chain -> Echo, no relayer fee",
+    "tx": "0xe47dac771067e3a763a85e94608f9610029e40db69f926aba38c3240e36a3efc",
+    "messageID": "0xc54fa238ca45134b3c9a07f340efa6429f9aa404b1604f2bd8528a64add7e02c",
+    "destination": "Echo",
+    "destinationBlockchainID": "0x1278d1be4b987e847be3465940eb5066c4604a7fbd6e086900823597d81af4c1",
+    "delivered": true,
+    "waitedSeconds": 0,
+    "at": "2026-11-12T11:05:53.993Z"
   }
 }
