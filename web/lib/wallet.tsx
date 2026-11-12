@@ -84,6 +84,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [signing, setSigning] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const pending = useRef<{ resolve: (address: string) => void; reject: (error: Error) => void } | null>(null);
+  /**
+   * The connected account, readable by a `send` that was created before the
+   * connect finished. A screen that calls `connect()` and then `send()` holds
+   * the `send` from its last render, when there was no account yet.
+   */
+  const current = useRef<string | null>(null);
+  const adopt = useCallback((account: string | null) => {
+    current.current = account;
+    setAddress(account);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -91,7 +101,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       .catch(() => null)
       .then((account) => {
         if (!live) return;
-        setAddress(account);
+        adopt(account);
         setWalletName(account ? activeWalletName() : null);
         setReady(true);
       });
@@ -105,7 +115,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, [signingIn]);
 
   const connect = useCallback(async () => {
-    if (address) return address;
+    if (current.current) return current.current;
     pending.current?.reject(new Error("Sign-in replaced"));
     return new Promise<string>((resolve, reject) => {
       pending.current = { resolve, reject };
@@ -128,24 +138,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           const failure = describeTxError(error);
           throw new Error(failure.cancelled ? "The wallet closed before you connected." : failure.message);
         });
-        setAddress(account);
+        adopt(account);
         setWalletName(activeWalletName());
         setSigningIn(false);
         pending.current?.resolve(account);
         pending.current = null;
       },
     }),
-    [],
+    [adopt],
   );
 
   const disconnect = useCallback(async () => {
     await disconnectWallet().catch(() => undefined);
-    setAddress(null);
+    adopt(null);
     setWalletName(null);
-  }, []);
+  }, [adopt]);
 
   const send = useCallback<WalletState["send"]>(
     async (steps, options = {}) => {
+      const address = current.current;
       if (!address) throw new TxError({ message: "Connect a wallet to continue.", cancelled: false, reason: null });
       if (steps.length === 0) throw new TxError({ message: "Nothing to send.", cancelled: false, reason: null });
       const progress = options.onProgress ?? (() => undefined);
@@ -193,7 +204,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setSigning(false);
       }
     },
-    [address],
+    [],
   );
 
   const value = useMemo<WalletState>(
