@@ -2430,5 +2430,78 @@
       "mira-shield-balloons": true,
       "oto-shield-glow-up": true
     }
+  },
+  "qaVault": {
+    "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs",
+    "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
+    "coin": "0x1701D2B17613242E978841349cf316938118010F",
+    "width": 1440,
+    "steps": [
+      {
+        "label": "register",
+        "functionName": "register",
+        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+        "value": "0",
+        "hash": "0x519520e9c911be6afb7d3999b28d6e9bf016ed166155fe4345abd6568ae66796",
+        "status": "success",
+        "block": 60942953,
+        "confirmMs": 1624,
+        "blockMs": 200,
+        "gasUsed": 319554,
+        "at": "2026-11-12T11:01:27.587Z"
+      },
+      {
+        "label": "shield",
+        "functionName": "approve",
+        "to": "0x1701D2B17613242E978841349cf316938118010F",
+        "value": "0",
+        "hash": "0x7cc84d7ff5f8010cf8684dd75fa41b501c59172d5d9899ad1a3261e66f31288c",
+        "status": "success",
+        "block": 60942968,
+        "confirmMs": 1862,
+        "blockMs": 803,
+        "gasUsed": 45924,
+        "at": "2026-11-12T11:01:46.646Z"
+      },
+      {
+        "label": "shield",
+        "functionName": "deposit",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "value": "0",
+        "hash": "0x279fd13ca5f02b6e61b07be9881c5b4bc579ea155c37a5d335972f9c67cb42a2",
+        "status": "success",
+        "block": 60942970,
+        "confirmMs": 1894,
+        "blockMs": 224,
+        "gasUsed": 604201,
+        "at": "2026-11-12T11:01:50.162Z"
+      },
+      {
+        "label": "send_private",
+        "functionName": "transfer",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "value": "0",
+        "hash": "0x466fb83e2438adf8b0dbee3147f8d25a76a5999a8d8fb50a7c646407eb04cc33",
+        "status": "success",
+        "block": 60942979,
+        "confirmMs": 1614,
+        "blockMs": 126,
+        "gasUsed": 1124153,
+        "at": "2026-11-12T11:01:58.787Z"
+      },
+      {
+        "label": "unshield",
+        "functionName": "withdraw",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "value": "0",
+        "hash": "0x9e2bc86648bb1bc8e897dd4efdba6f9bd7bf83989be63cec429488e536e236e2",
+        "status": "success",
+        "block": 60942985,
+        "confirmMs": 1606,
+        "blockMs": 33,
+        "gasUsed": 575920,
+        "at": "2026-11-12T11:02:06.764Z"
+      }
+    ]
   }
 }

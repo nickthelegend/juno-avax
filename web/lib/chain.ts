@@ -106,6 +106,16 @@ const REASONS: Record<string, string> = {
   Metadata: "Caption up to 400 characters and a picture are required.",
   DareBond: "A dare needs a bond (up to 2 AVAX), and a bond needs a dare.",
   ReentrancyGuardReentrantCall: "Refused: re-entrant call.",
+  // The Juno eERC vault (Ava Labs EncryptedERC).
+  UserAlreadyRegistered: "This wallet already has a private bag.",
+  UserNotRegistered: "That account has not opened a private bag yet.",
+  InvalidProof: "The proof did not verify against your bag. Reload the bag and try again.",
+  InvalidSender: "This proof was made for another account.",
+  InvalidChainId: "This proof was made for another chain.",
+  PendingHistoryLimitReached: "This bag has too many incoming amounts waiting. Move or unshield once to fold them in.",
+  AmountTooSmall: "That amount is too small to unshield.",
+  TokenBlacklisted: "This coin cannot be shielded.",
+  UnknownToken: "Nothing of this coin has been shielded yet.",
 };
 
 /** The custom error name inside a viem error, if the contract reverted with one. */

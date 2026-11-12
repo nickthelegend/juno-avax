@@ -10,7 +10,7 @@
  * The native build resolves `./browser-wallet` to the stub next to this file.
  */
 import type { Address, Hex } from "viem";
-import { getAddress, numberToHex } from "viem";
+import { getAddress, numberToHex, toHex } from "viem";
 import { FUJI_EXPLORER } from "@juno/sdk";
 
 import { CHAIN_ID, RPC_URL } from "./chain";
@@ -126,4 +126,15 @@ export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex
   })) as Hex;
   if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) throw new Error("The wallet did not return a transaction hash. Check Snowtrace before trying again.");
   return hash;
+}
+
+/**
+ * Ask the wallet to sign a plain-text message (personal_sign). Used once per
+ * session to derive the holder's eERC key; it is not a transaction.
+ */
+export async function signWithWallet(from: Address, message: string): Promise<Hex> {
+  if (!active) throw new Error("Connect a wallet first.");
+  const signature = (await active.provider.request({ method: "personal_sign", params: [toHex(message), from] })) as Hex;
+  if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error("The wallet did not return a signature.");
+  return signature;
 }

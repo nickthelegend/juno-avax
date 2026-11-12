@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { encodeFunctionData, type Abi, type Address, type Hex } from "viem";
+import { decodeErrorResult, encodeFunctionData, type Abi, type Address, type Hex } from "viem";
 import { factoryAbi, postAbi } from "@juno/sdk";
+import { encryptedErcAbi, registrarAbi } from "@juno/sdk/eerc";
 
 import { fujiClient, type TxStep } from "./api";
 import { invalidateMarkets } from "./markets";
@@ -13,6 +14,7 @@ import {
   preloadWallet,
   restoreWallet,
   sendWithWallet,
+  signWithWallet,
   type WalletOption,
 } from "./browser-wallet";
 import { describeTxError, EXPLORER_NAME, FACTORY, TxError } from "./chain";
@@ -65,6 +67,8 @@ export type WalletState = {
   walletName: string | null;
   via: "wallet" | null;
   send: (steps: TxStep[], options?: { onProgress?: (progress: SendProgress) => void }) => Promise<SendResult>;
+  /** personal_sign with the connected wallet (used once to derive the eERC key; not a transaction). */
+  signMessage: (message: string) => Promise<Hex>;
   connect: () => Promise<string>;
   disconnect: () => Promise<void>;
 };
@@ -73,7 +77,31 @@ const WalletContext = createContext<WalletState | null>(null);
 /** Refusals that only mean "not yet" and pass once the next block is stamped. */
 const TIME_WINDOWS = new Set(["RevealWindow", "SettleWindow", "DareWindow"]);
 
-const ABIS: Record<TxStep["abi"], Abi> = { post: postAbi as Abi, factory: factoryAbi as Abi };
+const ABIS: Record<TxStep["abi"], Abi> = {
+  post: postAbi as Abi,
+  factory: factoryAbi as Abi,
+  eerc: encryptedErcAbi as Abi,
+  registrar: registrarAbi as Abi,
+};
+
+/** A simulation refused with a bare selector ("custom error 0x…"): name it from the step's ABI. */
+function namedRefusal(error: unknown, abi: Abi) {
+  const failure = describeTxError(error);
+  if (failure.reason) return failure;
+  const text = error instanceof Error ? error.message : String(error ?? "");
+  const selector = /custom error (0x[0-9a-fA-F]{8})/.exec(text)?.[1];
+  const reason = /reverted with reason:\s*([^.\n]+)/i.exec(text)?.[1]?.trim();
+  if (selector) {
+    try {
+      const name = decodeErrorResult({ abi, data: selector as Hex }).errorName;
+      return describeTxError(new Error(`reverted with custom error: ${name}()`));
+    } catch {
+      /* not in this ABI */
+    }
+  }
+  if (reason === "Auditor public key not set") return { message: "The vault has no auditor yet, so nothing can be shielded.", cancelled: false, reason: null };
+  return failure;
+}
 
 export function encodeStep(step: TxStep): Hex {
   return encodeFunctionData({ abi: ABIS[step.abi], functionName: step.functionName, args: step.args as unknown[] });
@@ -179,7 +207,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             const failure = await client
               .call({ account: address as Address, to: step.to, data, value })
               .then(() => null)
-              .catch((error: unknown) => describeTxError(error));
+              .catch((error: unknown) => namedRefusal(error, ABIS[step.abi]));
             if (!failure) break;
             if (attempt < 4 && failure.reason && TIME_WINDOWS.has(failure.reason)) {
               await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -220,9 +248,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const signMessage = useCallback<WalletState["signMessage"]>(async (message) => {
+    const account = current.current;
+    if (!account) throw new TxError({ message: "Connect a wallet to continue.", cancelled: false, reason: null });
+    return signWithWallet(account as Address, message).catch((error: unknown) => {
+      throw new TxError(describeTxError(error));
+    });
+  }, []);
+
   const value = useMemo<WalletState>(
-    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, connect, disconnect }),
-    [address, ready, signing, walletName, send, connect, disconnect],
+    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, signMessage, connect, disconnect }),
+    [address, ready, signing, walletName, send, signMessage, connect, disconnect],
   );
 
   return (

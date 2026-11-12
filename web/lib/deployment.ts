@@ -8,6 +8,16 @@ export const DEPLOYMENT = {
   "names": {
     "0xB9F0CdB519F419E26B19A92fFab080f974390037": "mira",
     "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A": "kai",
-    "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b": "oto"
+    "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b": "oto",
+    "0xB490723D988BD713374D9c6Efd875614B89770fe": "qa",
+    "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8": "auditor",
+    "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac": "private bags (eERC)"
+  },
+  "eerc": {
+    "encryptedERC": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+    "registrar": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+    "auditor": "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8",
+    "startBlock": 60942541,
+    "source": "https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1"
   }
 } as const;

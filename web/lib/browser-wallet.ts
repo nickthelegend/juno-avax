@@ -27,3 +27,6 @@ export function activeWalletName(): string | null {
 export async function sendWithWallet(_tx: { from: Address; to: Address; data: Hex; value: bigint }): Promise<Hex> {
   throw unavailable();
 }
+export async function signWithWallet(_from: Address, _message: string): Promise<Hex> {
+  throw unavailable();
+}

@@ -18,6 +18,7 @@ import {
   Button,
   Caption,
   Card,
+  Chevron,
   ChevronLeft,
   Col,
   ExternalGlyph,
@@ -46,6 +47,7 @@ import { money, since, tokens, useApi } from "../../lib/useApi";
 import { shareCoin } from "../../lib/social";
 import { useWallet } from "../../lib/wallet";
 import { useFeedRevision } from "../../lib/refresh";
+import { VAULT } from "../../lib/vault";
 import { theme } from "../../theme";
 
 /**
@@ -338,6 +340,11 @@ export default function CoinScreen() {
               </FloorRow>
               {coin.onchain.phase === "curve" || coin.onchain.phase === "graduated" ? <AuctionCard coin={coin} onChanged={detail.refresh} /> : null}
               <DareCard coin={coin} onChanged={detail.refresh} />
+              <PrivateBagsRow
+                shielded={detail.data!.holders.find((h) => VAULT && sameAddress(h.wallet, VAULT.encryptedERC))?.balance ?? 0}
+                symbol={coin.symbol}
+                onOpen={() => router.push(`/vault?coin=${coin.address}` as never)}
+              />
 
               {/* The creator's own payday, on their own coin. The contract
                   checks it too; the button is simply not shown to anyone else. */}
@@ -463,6 +470,66 @@ export default function CoinScreen() {
     </Page>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Private bags (eERC)                                                 */
+/* ------------------------------------------------------------------ */
+
+/** How much of this coin sits in the eERC vault (public), and the way in. */
+function PrivateBagsRow({ shielded, symbol, onOpen }: { shielded: number; symbol: string; onOpen: () => void }) {
+  if (!VAULT) return null;
+  const tag = "$" + symbol;
+  return (
+    <Tappable onPress={onOpen} to={0.98}>
+      <BagRow accessibilityRole="button" accessibilityLabel="Hide your bag">
+        <BagLock>
+          <Svg width={16} height={16} viewBox="0 0 24 24">
+            <Path d="M7 10V7.5a5 5 0 0 1 10 0V10" stroke={theme.colors.lime} strokeWidth={2.4} fill="none" />
+            <Path d="M5.5 10h13a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-7A1.5 1.5 0 0 1 5.5 10z" fill={theme.colors.lime} />
+          </Svg>
+        </BagLock>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <BagTitle>Hide your bag</BagTitle>
+          <BagCaption numberOfLines={2}>
+            {shielded > 0
+              ? `${shielded.toLocaleString("en-US")} ${tag} sit in private bags. Nobody can see whose.`
+              : `Shield your ${tag} so whales and bots cannot see how much you hold.`}
+          </BagCaption>
+        </View>
+        <Chevron color={theme.colors.lime} />
+      </BagRow>
+    </Tappable>
+  );
+}
+
+const BagRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: ${(p) => p.theme.radius.md}px;
+  background-color: ${(p) => p.theme.colors.ink};
+`;
+const BagLock = styled.View`
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(214, 255, 61, 0.12);
+`;
+const BagTitle = styled.Text`
+  font-size: ${(p) => p.theme.type.label.size}px;
+  font-weight: 800;
+  color: ${(p) => p.theme.colors.onInk};
+`;
+const BagCaption = styled.Text`
+  margin-top: 2px;
+  font-size: ${(p) => p.theme.type.caption.size}px;
+  line-height: 16px;
+  color: rgba(243, 247, 238, 0.68);
+`;
 
 /* ------------------------------------------------------------------ */
 /* Tabs                                                                */

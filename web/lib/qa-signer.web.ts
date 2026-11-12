@@ -5,7 +5,8 @@ import { factoryAbi, fuji } from "@juno/sdk";
 
 import { fujiClient } from "./api";
 import { FACTORY, RPC_URL } from "./chain";
-import { qaRpc, validateQaCall, type QaChecked } from "./qa-signer-policy";
+import { qaRpc, validateQaCall, validateQaMessage, type QaChecked } from "./qa-signer-policy";
+import { DEPLOYMENT } from "./deployment";
 
 export type WalletOption = { id: string; name: string; icon: string | null; provider: unknown };
 type Injection = { privateKey: Hex; rpcUrl: string; factory: Address };
@@ -76,10 +77,12 @@ export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex
     const current = credentials();
     if (tx.from.toLowerCase() !== current.account.address.toLowerCase()) throw Error("QA signer account mismatch.");
     const reader = fujiClient();
-    const isPost = tx.to.toLowerCase() === current.factory.toLowerCase()
+    const isPost = tx.to.toLowerCase() === current.factory.toLowerCase() || (DEPLOYMENT.eerc && [DEPLOYMENT.eerc.encryptedERC, DEPLOYMENT.eerc.registrar].some((a) => a.toLowerCase() === tx.to.toLowerCase()))
       ? false
       : await reader.readContract({ address: current.factory, abi: factoryAbi, functionName: "isPost", args: [tx.to] });
-    const checked = validateQaCall({ to: tx.to, data: tx.data, value: tx.value }, current.factory, isPost);
+    const vault = DEPLOYMENT.eerc ? { encryptedERC: DEPLOYMENT.eerc.encryptedERC as Address, registrar: DEPLOYMENT.eerc.registrar as Address } : null;
+    const isVault = !!vault && [vault.encryptedERC, vault.registrar].some((a) => a.toLowerCase() === tx.to.toLowerCase());
+    const checked = validateQaCall({ to: tx.to, data: tx.data, value: tx.value }, current.factory, isPost && !isVault, vault);
     const reservation = await window.__JUNO_QA_AUTHORIZE__!(checked);
     const wallet = createWalletClient({ account: current.account, chain: fuji, transport: http(current.rpc) });
     const request = await wallet.prepareTransactionRequest({ to: tx.to, data: tx.data, value: tx.value });
@@ -94,4 +97,13 @@ export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex
   } finally {
     busy = false;
   }
+}
+
+/** Signs only the eERC key message for its own account on Fuji (see validateQaMessage). */
+export async function signWithWallet(from: Address, message: string): Promise<Hex> {
+  if (!connected) throw Error("QA signer is not connected.");
+  const current = credentials();
+  if (from.toLowerCase() !== current.account.address.toLowerCase()) throw Error("QA signer account mismatch.");
+  validateQaMessage(message, current.account.address);
+  return current.account.signMessage({ message });
 }

@@ -4,13 +4,14 @@
   "packageManager": "pnpm@10.29.2",
   "type": "module",
   "scripts": {
-    "test": "cd contracts && forge test && cd .. && pnpm --filter @juno/sdk test && pnpm --filter juno-avax-web test",
-    "build": "cd contracts && forge build && cd .. && node scripts/gen-abi.mjs && pnpm --filter @juno/sdk build && cd web && npx tsc --noEmit",
-    "web:export": "node scripts/gen-deployment.mjs && pnpm --filter juno-avax-web export:web",
+    "test": "cd contracts && forge test && cd .. && pnpm --filter @juno/sdk test && pnpm --filter juno-avax-web test && pnpm --filter @juno/scripts test:eerc",
+    "build": "cd contracts && forge build && FOUNDRY_PROFILE=eerc forge build && cd .. && node scripts/gen-abi.mjs && pnpm --filter @juno/sdk build && cd web && npx tsc --noEmit",
+    "web:export": "node scripts/gen-deployment.mjs && node scripts/copy-eerc-assets.mjs && pnpm --filter juno-avax-web export:web",
     "web:serve": "node web/scripts/serve.mjs 5391",
     "fuji:seed": "cd scripts && npx tsx fuji/seed.ts",
-    "qa:flow": "pnpm --filter juno-avax-web export:qa && cd scripts && npx tsx qa-flow.ts",
+    "qa:flow": "node scripts/copy-eerc-assets.mjs && pnpm --filter juno-avax-web export:qa && cd scripts && npx tsx qa-flow.ts",
     "qa:shots": "node scripts/shots.mjs",
-    "evidence": "node scripts/evidence-table.mjs"
+    "evidence": "node scripts/evidence-table.mjs",
+    "qa:vault": "node scripts/copy-eerc-assets.mjs && pnpm --filter juno-avax-web export:qa && cd scripts && npx tsx qa-vault.ts"
   }
 }

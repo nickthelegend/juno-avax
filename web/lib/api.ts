@@ -280,7 +280,7 @@ export type DepthPoint = {
 export type TxStep = {
   label: string;
   to: Address;
-  abi: "post" | "factory";
+  abi: "post" | "factory" | "eerc" | "registrar";
   functionName: string;
   args: readonly unknown[];
   /** wei, decimal string. */
