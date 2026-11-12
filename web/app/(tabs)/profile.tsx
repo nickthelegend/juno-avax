@@ -132,7 +132,7 @@ export default function ProfileScreen() {
         <Placeholder
           art
           title="No wallet yet"
-          detail={`${Platform.OS === "web" ? "Connect Core or MetaMask, or use a Juno wallet" : "Use a Juno wallet"} with free test AVAX. ${NETWORK_LABEL}.`}
+          detail={`${Platform.OS === "web" ? "Connect Core or MetaMask, or make a Juno wallet" : "Make a Juno wallet"} in one tap. ${NETWORK_LABEL}.`}
           action={
             // Not `.then(portfolio.refresh)`: that refresh was captured before
             // the wallet existed, re-ran the read with no address, and its

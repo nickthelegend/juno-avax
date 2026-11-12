@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.launch.junoavax"
+      "bundleIdentifier": "app.launch.junoavax",
+      "infoPlist": {
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -37,10 +40,22 @@
       "./plugins/withQuotedBundleScript",
       "expo-image",
       "expo-status-bar",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#12150E"
+        }
+      ]
     ],
     "scheme": "junoavax",
     "backgroundColor": "#D3E3CB",
-    "description": "Every post is a coin on Avalanche: a one-minute sealed-bid opening auction with one clearing price, a bonding curve in AVAX, a floor every holder can redeem, and dare bonds. Fuji testnet."
+    "description": "Every post is a coin on Avalanche: a one-minute sealed-bid opening auction with one clearing price, a bonding curve in AVAX, a floor every holder can redeem, and dare bonds. Fuji testnet.",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    }
   }
 }

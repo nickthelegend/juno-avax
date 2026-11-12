@@ -4,40 +4,30 @@
     "appVersionSource": "local"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
+    "simulator": {
       "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "channel": "production",
       "env": {
-        "EXPO_PUBLIC_CHAIN_ID": "421614"
+        "EXPO_PUBLIC_JUNO_FACTORY": "0xac736951c75e849e7db40b333cc0dff2baf88539",
+        "EXPO_PUBLIC_APP_URL": "https://juno-avax.vercel.app",
+        "EXPO_PUBLIC_QA_SIGNER": "0"
       }
     },
-    "preview": {
+    "apk": {
       "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://juno-arb-api.vercel.app",
-        "EXPO_PUBLIC_CHAIN_ID": "421614"
-      },
       "android": {
         "buildType": "apk"
       },
-      "ios": {
-        "simulator": false
-      }
-    },
-    "production": {
-      "autoIncrement": true,
+      "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://juno-arb-api.vercel.app",
-        "EXPO_PUBLIC_CHAIN_ID": "421614"
+        "EXPO_PUBLIC_JUNO_FACTORY": "0xac736951c75e849e7db40b333cc0dff2baf88539",
+        "EXPO_PUBLIC_APP_URL": "https://juno-avax.vercel.app",
+        "EXPO_PUBLIC_QA_SIGNER": "0"
       }
     }
   },
-  "submit": {
-    "production": {
-      "ios": {},
-      "android": {
-        "track": "internal"
-      }
-    }
-  }
+  "submit": {}
 }

@@ -10,6 +10,8 @@
  * the space and the build fails with "/Volumes/Extreme: No such file or
  * directory". Wrapping it as "$(…)" runs the same script with its path intact.
  * `ios/` is generated, so the fix lives here and survives every prebuild.
+ * Expo SDK 58's template already quotes the substitution ("`…`"); that form
+ * is left as it is.
  */
 const { withXcodeProject } = require("expo/config-plugins");
 
@@ -21,7 +23,9 @@ module.exports = function withQuotedBundleScript(config) {
     const phases = mod.modResults.hash.project.objects.PBXShellScriptBuildPhase ?? {};
     for (const phase of Object.values(phases)) {
       if (typeof phase !== "object" || typeof phase.shellScript !== "string") continue;
-      if (phase.shellScript.includes(BROKEN)) {
+      // SDK 58's template already wraps the backticks in double quotes, which
+      // keeps the path whole; rewriting that form would unquote it again.
+      if (phase.shellScript.includes(BROKEN) && !phase.shellScript.includes(`\\"${BROKEN}\\"`)) {
         phase.shellScript = phase.shellScript.replace(BROKEN, FIXED);
       }
     }

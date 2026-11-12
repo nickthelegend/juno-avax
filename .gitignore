@@ -19,3 +19,8 @@ contracts/out-eerc/
 contracts/cache-eerc/
 web/public/eerc/
 api/out/
+
+# Generated native project and the iOS Simulator build (web/scripts/build-ios-sim.sh; the zip is hosted on Vercel, not in git)
+web/ios/
+web/android/
+web/public/download/*.zip

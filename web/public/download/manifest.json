@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "url": null
+  },
+  "ios": {
+    "file": "Juno-iOS-Simulator.zip",
+    "bytes": 16223619,
+    "sha256": "f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913",
+    "version": "4.0.0",
+    "built": "2026-11-12",
+    "bundleId": "app.launch.junoavax",
+    "build": "Release, iphonesimulator arm64 (Apple silicon Macs), ad-hoc signed"
+  }
+}
