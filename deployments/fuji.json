@@ -3658,5 +3658,27 @@
       }
     ],
     "at": "2026-11-12T15:09:32.072Z"
+  },
+  "standaloneIosRun": {
+    "note": "Standalone Juno.app (Release, iphonesimulator arm64, ad-hoc signed; web/public/download/Juno-iOS-Simulator.zip, first build sha256 c2caf75e\u2026cb3e; the hosted zip is the rebuild with the shorter profile copy and a light launch status bar, sha256 f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913) installed from the zip with xcrun simctl on an iPhone 17 Pro simulator, not Expo Go. A new Juno wallet in the app's own keychain got its drip in one tap, then bought 10 SPROUT on the curve from the coin page.",
+    "date": "2026-11-12",
+    "account": "0x46415ba70888cbfed36c1ed8a2aba12eecf10195",
+    "steps": [
+      {
+        "step": "drip (JunoGasStation, relayed by Juno API)",
+        "hash": "0xcf03f74f93cef471f6a8c6766c4bf97aa1d3b8af746fbc0e7075afd2c027b8f0",
+        "status": "success",
+        "block": 60957549
+      },
+      {
+        "step": "buy 10 SPROUT",
+        "to": "0x6f8135afc46cd603e19c74f4486d93a824d531e1",
+        "hash": "0x73570dfdb0fad53b777d69ab7565aee584225d9171afdd5bcff97de5c1f1ace0",
+        "status": "success",
+        "block": 60957584,
+        "finalSeconds": 0.1
+      }
+    ],
+    "screenshots": "orchestration/shots/avax-juno/ship/ios/"
   }
 }
