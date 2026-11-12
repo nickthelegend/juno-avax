@@ -29,3 +29,38 @@ test('one shared budget reserves value plus three times the gas charge', () => {
   assert.throws(() => reserveQaBudget(QA_BUDGET, 1n, 1n, 1n), /0.015/);
   assert.throws(() => reserveQaBudget(0n, 0n, 1n, -1n));
 });
+
+// The eERC vault (Hide your bag): only the four user calls, no value, approvals only to the vault.
+import { encryptedErcAbi, registrarAbi } from '@juno/sdk/eerc';
+import { validateQaMessage } from '../lib/qa-signer-policy';
+
+const vault = { encryptedERC: '0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac', registrar: '0x949a55ddff2a85ce1a1bad7c760515903dee0c93' } as const;
+const zeros7 = Array(7).fill(0n) as unknown as readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint];
+
+test('QA signer calls only deposit/transfer/withdraw on the vault and register on the registrar, with no value', () => {
+  const deposit = encodeFunctionData({ abi: encryptedErcAbi, functionName: 'deposit', args: [5n, post, zeros7] });
+  assert.equal(validateQaCall({ to: vault.encryptedERC, data: deposit, value: 0n }, factory, false, vault).target, 'vault');
+  assert.throws(() => validateQaCall({ to: vault.encryptedERC, data: deposit, value: 1n }, factory, false, vault), /no value/);
+  const setAuditor = encodeFunctionData({ abi: encryptedErcAbi, functionName: 'setAuditorPublicKey', args: [post] });
+  assert.throws(() => validateQaCall({ to: vault.encryptedERC, data: setAuditor, value: 0n }, factory, false, vault), /refuses setAuditorPublicKey/);
+  const proof = { proofPoints: { a: [0n, 0n], b: [[0n, 0n], [0n, 0n]], c: [0n, 0n] }, publicSignals: [0n, 0n, 0n, 0n, 0n] } as never;
+  const register = encodeFunctionData({ abi: registrarAbi, functionName: 'register', args: [proof] });
+  assert.equal(validateQaCall({ to: vault.registrar, data: register, value: 0n }, factory, false, vault).functionName, 'register');
+  assert.throws(() => validateQaCall({ to: vault.encryptedERC, data: deposit, value: 0n }, factory, false, null), /only calls this Juno factory/);
+});
+
+test('QA signer approves a post coin only to the vault', () => {
+  const ok = encodeFunctionData({ abi: postAbi, functionName: 'approve', args: [vault.encryptedERC, 5n] });
+  assert.equal(validateQaCall({ to: post, data: ok, value: 0n }, factory, true, vault).functionName, 'approve');
+  const bad = encodeFunctionData({ abi: postAbi, functionName: 'approve', args: [factory, 5n] });
+  assert.throws(() => validateQaCall({ to: post, data: bad, value: 0n }, factory, true, vault), /only approves the Juno eERC vault/);
+});
+
+test('QA signer signs only the eERC key message for its own account on Fuji', () => {
+  const me = '0xB490723D988BD713374D9c6Efd875614B89770fe' as const;
+  const good = `Juno: open your private bag\n\n...\n\nAccount: ${me.toLowerCase()}\nChain: 43113`;
+  validateQaMessage(good, me);
+  assert.throws(() => validateQaMessage('Sign in to evil.example', me), /only signs/);
+  assert.throws(() => validateQaMessage(good.replace(me.toLowerCase(), '0x0000000000000000000000000000000000000001'), me), /another account/);
+  assert.throws(() => validateQaMessage(good.replace('43113', '43114'), me), /another account or chain/);
+});
