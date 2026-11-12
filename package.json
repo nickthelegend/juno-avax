@@ -1,0 +1,6 @@
+{
+  "name": "juno-avax",
+  "private": true,
+  "packageManager": "pnpm@10.29.2",
+  "type": "module"
+}
