@@ -171,11 +171,14 @@ export function FeedCard({
           accessibilityRole="button"
           accessibilityLabel={`Market cap ${inQuote(coin, coin.marketCapQuote, coin.marketCap)}. Open the market.`}
         >
-          <View style={styles.worth}>
-            {change === null ? null : <TriangleGlyph up={change >= 0} color={tone} size={11} />}
-            <Text style={[styles.worthText, { color: auction ? theme.colors.muted : tone }]}>
-              {auction ? "200 for sale" : shortAvax(coin.marketCapQuote ?? coin.marketCap)}
-            </Text>
+          <View>
+            <View style={styles.worth}>
+              {change === null || auction ? null : <TriangleGlyph up={change >= 0} color={tone} size={11} />}
+              <Text style={[styles.worthText, { color: auction ? theme.colors.muted : tone }]}>
+                {auction ? "200 for sale" : shortAvax(coin.marketCapQuote ?? coin.marketCap)}
+              </Text>
+            </View>
+            <Text style={styles.worthUnit}>{auction ? "sealed bids" : "AVAX market cap"}</Text>
           </View>
         </Tappable>
 
@@ -310,9 +313,9 @@ export function FeedCard({
 /** A market cap that fits the action row at 375pt: two significant figures under 1 AVAX. */
 function shortAvax(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  if (value === 0) return "0 AVAX";
-  if (value < 1) return `${Number(value.toPrecision(2))} AVAX`;
-  return `${value < 100 ? value.toFixed(2) : Math.round(value).toLocaleString("en-US")} AVAX`;
+  if (value === 0) return "0";
+  if (value < 1) return `${Number(value.toPrecision(2))}`;
+  return `${value < 100 ? value.toFixed(2) : Math.round(value).toLocaleString("en-US")}`;
 }
 
 /**
@@ -423,7 +426,8 @@ const styles = StyleSheet.create({
   },
 
   actions: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingTop: 8 },
-  worth: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 44, paddingRight: 2, flexShrink: 1 },
+  worth: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 24, paddingRight: 2, flexShrink: 1 },
+  worthUnit: { fontSize: 11, fontWeight: "600", color: theme.colors.muted, marginTop: -1 },
   worthText: { fontSize: 17, fontWeight: "800", letterSpacing: -0.3, fontVariant: ["tabular-nums"] },
   action: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, minHeight: 44, minWidth: 44 },
   actionText: { fontSize: 14, fontWeight: "700", color: theme.colors.text, fontVariant: ["tabular-nums"] },

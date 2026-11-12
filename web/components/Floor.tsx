@@ -404,7 +404,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
           <Object3D art="envelope" alt="" size={44} style={{ margin: "-6px 0" }} />
         </Row>
         <View style={f.tiles}>
-          <Tile label="Cleared at" value={n.clearingPrice > 0 ? money(n.clearingPrice, "AVAX") : "No fills"} />
+          <Tile label="Cleared · AVAX" value={n.clearingPrice > 0 ? money(n.clearingPrice, "AVAX").replace(" AVAX", "") : "No fills"} />
           <Tile label="Sealed bids" value={String(n.sealedBids)} />
           <Tile label="Revealed" value={String(n.revealedBids)} />
         </View>
@@ -546,14 +546,14 @@ export function GraduationMoment({ coin }: { coin: Coin }) {
         <FloorGlyph size={22} color={c.lime} filled />
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <Text style={f.momentFigure}>{amountOf(coin.onchain.floorVault, "AVAX")} backs every token</Text>
+        <Text style={f.momentFigure}>{amountOf(coin.onchain.floorVault, "AVAX")} now in the floor</Text>
         <Text style={f.momentKicker}>
           {when
             ? `Graduated ${when.toLocaleDateString([], { day: "numeric", month: "short" })}, ${when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
             : "Graduated"}
         </Text>
         <Text style={f.momentBody}>
-          All 800 curve tokens sold. The curve closed and everything it raised moved into the floor, so each token redeems for {amountOf(coin.onchain.floorPerToken * 0.99, "AVAX")} any time.
+          All 800 curve tokens sold. The curve closed and everything it raised moved into the floor: each of the {coin.onchain.totalSupply} tokens redeems for {amountOf(coin.onchain.floorPerToken * 0.99, "AVAX")}, any time.
         </Text>
         <Pressable onPress={() => void Linking.openURL(explorer("address", coin.address))} accessibilityRole="link" style={f.momentLink}>
           <Text style={f.momentLinkText}>Contract on {EXPLORER_NAME}</Text>
@@ -635,7 +635,7 @@ export function DareCard({ coin, onChanged }: { coin: Coin; onChanged?: () => vo
       </Row>
       <Text style={f.dare}>{n.dare}</Text>
       <View style={f.tiles}>
-        <Tile label="Bond" value={n.dareBond > 0 ? money(n.dareBond, "AVAX") : n.dareFinalized ? "Settled" : "None"} on={n.dareBond > 0} />
+        <Tile label="Bond · AVAX" value={n.dareBond > 0 ? money(n.dareBond, "AVAX").replace(" AVAX", "") : n.dareFinalized ? "Settled" : "None"} on={n.dareBond > 0} />
         <Tile label="Proof" value={n.proof ? "Posted" : "Not yet"} />
         <Tile label={n.dareFinalized ? "Result" : "Closes"} value={n.dareFinalized ? (n.dareAccepted ? "Done" : "Flaked") : open ? clock(left!) : "Now"} />
       </View>
@@ -669,9 +669,9 @@ export function DareCard({ coin, onChanged }: { coin: Coin; onChanged?: () => vo
         <>
           <View style={f.field}>
             <Text style={f.tileLabel}>Proof link</Text>
-            <TextInput value={proof} onChangeText={setProof} placeholder="https://…" placeholderTextColor={c.faint} autoCapitalize="none" style={f.fieldInput} accessibilityLabel="Proof link" />
+            <TextInput value={proof} onChangeText={setProof} placeholder="https:// link to your photo" placeholderTextColor={c.faint} autoCapitalize="none" style={f.fieldInput} accessibilityLabel="Proof link" />
           </View>
-          <Button label="Post proof" variant="lime" tall disabled={!/^https:\/\/\S{4,290}$/.test(proof.trim())} loading={busy === "Post proof"} onPress={() => void act("Post proof", "submitProof", [proof.trim()])} />
+          <Button label="Post proof" variant="lime" tall disabled={!/^(https:\/\/\S{4,290}|\/art\/[\w./-]{3,120})$/.test(proof.trim())} loading={busy === "Post proof"} onPress={() => void act("Post proof", "submitProof", [proof.trim()])} />
         </>
       ) : open && n.proof && myVote === 0 && (held ?? 0) > 0 ? (
         <View style={f.inputs}>

@@ -368,7 +368,7 @@ export default function CoinScreen() {
                   <Pill label="Graduated" tone="pos" />
                   <Tappable onPress={() => void Linking.openURL(explorer("address", coin.address))}>
                     <Row gap={6} align="center">
-                      <LinkText>Graduated · escrow on {EXPLORER_NAME}</LinkText>
+                      <LinkText>Graduated · contract on {EXPLORER_NAME}</LinkText>
                       <ExternalGlyph />
                     </Row>
                   </Tappable>
@@ -500,11 +500,11 @@ function ActivityTab({
             </Row>
           </Tappable>
           <Verb $buy={row.side === "buy"}>
-            {row.kind === "auction" ? "Bid" : row.kind === "redeem" ? "Redeem" : row.side === "buy" ? "Buy" : "Sell"}
+            {row.kind === "auction" ? "Won" : row.kind === "redeem" ? "Redeem" : row.side === "buy" ? "Buy" : "Sell"}
           </Verb>
           <Mono style={{ flex: 1, textAlign: "right" }}>{tokens(row.amount)}</Mono>
-          <Mono muted numberOfLines={1} style={{ width: 92, textAlign: "right" }}>
-            {money(row.valueQuote ?? toQuote(row.valueUsd), currency)}
+          <Mono muted numberOfLines={1} style={{ width: 84, textAlign: "right" }}>
+            {money(row.valueQuote ?? toQuote(row.valueUsd), currency).replace(` ${currency}`, "")}
           </Mono>
           <Caption style={{ width: 34, textAlign: "right" }}>{since(row.timestamp)}</Caption>
         </Line>
@@ -1005,7 +1005,7 @@ const Line = styled.View`
 const Verb = styled.Text<{ $buy: boolean }>`
   font-size: ${(p) => p.theme.type.label.size}px;
   font-weight: 800;
-  width: 38px;
+  width: 58px;
   color: ${(p) => (p.$buy ? p.theme.colors.pos : p.theme.colors.neg)};
 `;
 

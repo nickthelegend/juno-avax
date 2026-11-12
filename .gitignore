@@ -14,3 +14,4 @@ contracts/cache/
 contracts/broadcast/*/31337/
 contracts/broadcast/**/dry-run/
 .seed-secrets.json
+dist-qa/
