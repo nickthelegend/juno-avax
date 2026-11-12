@@ -5,15 +5,17 @@ Recorded on 12 November 2026. Every number below came from running the command n
 | Suite | Command | Result |
 | --- | --- | --- |
 | Contracts (Foundry, local EVM) | `cd contracts && forge test` | **70 passed, 0 failed** (7 suites) |
-| SDK maths and commitment | `pnpm --filter @juno/sdk test` | **4 passed, 0 failed** (11 assertions on quotes) |
-| Web unit tests (accounting, price window, QA signer policy) | `pnpm --filter juno-avax-web test` | **10 passed, 0 failed** |
+| eERC end to end (Anvil, real proofs, production verifiers) | `pnpm --filter @juno/scripts test:eerc` | **26/26 checks passed**, 21 transactions |
+| SDK maths, commitment and eERC client crypto | `pnpm --filter @juno/sdk test` | **13 passed, 0 failed** (4 maths + 9 eERC) |
+| Web unit tests (accounting, price window, QA signer policy incl. vault rules) | `pnpm --filter juno-avax-web test` | **13 passed, 0 failed** |
 | Web typecheck | `cd web && npx tsc --noEmit` | 0 errors |
-| Web static export | `pnpm --filter juno-avax-web export:web` | builds `web/dist` |
-| Fuji seeding (live chain) | `npx tsx scripts/fuji/seed.ts` | see `deployments/fuji.json` → `seed` and the README table |
-| Full flow through the web app (live chain, headless Chrome) | `npx tsx scripts/qa-flow.ts` | see `deployments/fuji.json` → `qaFlow` and the README table |
-| Route screenshots at 1440 and 375 | `node scripts/shots.mjs` | `orchestration/shots/avax-juno/` |
+| Web static export (hostable) | `pnpm web:export` | builds `web/dist` with `/eerc/` circuits |
+| Fuji seeding (live chain) | `scripts/fuji/seed*.ts`, `scripts/eerc/fuji.ts` | `deployments/fuji.json` → `seed`, `eerc` |
+| Full post flow through the web app at 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-flow.ts` (and 375) | `deployments/fuji.json` → `qaRuns` |
+| Hide your bag through the web app at 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-vault.ts` (and 375) | `deployments/fuji.json` → `qaVaultRuns` |
+| Route screenshots at 1440 and 375 | `node scripts/shots.mjs` | `orchestration/shots/avax-juno/v2/` |
 
-No test that touches a chain uses a mock: Foundry runs the real contracts on its local EVM, and the seeding and web flow run on Avalanche Fuji.
+No test that touches a chain uses a mock: Foundry runs the real contracts on its local EVM, the eERC test runs Ava Labs' contracts and real Groth16 proofs on Anvil, and the seeding and web flows run on Avalanche Fuji.
 
 ## Contracts — 70 tests
 
@@ -27,13 +29,21 @@ No test that touches a chain uses a mock: Foundry runs the real contracts on its
 | `Attacks.t.sol` | 12 | **Reentrancy** from a malicious receiver on `sell`, `redeem` and `claimRefund` is blocked (`ReentrancyGuardReentrantCall`) and pays once; **reveal mismatch** (changed price, wrong salt) reverts; **late bid** reverts; early and late reveals revert; a **copied commitment** cannot be revealed by the copier; a commitment does not **replay** on another post; **floor drain**: buy-then-redeem never profits (fuzz), split redemptions never beat the pro-rata share (fuzz), the last holders draining the floor leave nothing for a new buyer to claim; strangers cannot withdraw earnings. |
 | `Invariant.t.sol` | 2 | Over 64 runs × 40 random calls (buy, sell, redeem, claim, withdraw by three actors): the post's AVAX balance always covers floor + reserve + escrow + earnings + bond + refunds owed, and supply never exceeds 200 + curve sold. |
 
-## SDK — 4 tests
+## eERC — 26 checks on Anvil (`scripts/eerc/local-e2e.ts`)
+
+The real Juno contracts plus Ava Labs' EncryptedERC (converter mode, the production verifiers from `contracts/lib/EncryptedERC/contracts/prod`) on a local Anvil chain, with proofs built by snarkjs from the shipped zkeys. Happy path: a post with real holders; the same wallet signature reopens the same key; register; nothing can be shielded before an auditor is set; only the owner sets the auditor; shield 30 (the post's public holder list shows the vault holding 30, and mira shows 10); mira's key decrypts 30 and kai's key cannot; a private send of 12 (mira 18, kai 12, each read with its own key; the amount does not appear in the calldata; the public sees no amount and the auditor decrypts 12; a holder key is not an auditor key); unshield 5 and sell them on the curve; unshield everything back to 0. **Attacks refused on chain:** another account submitting mira's registration proof (`InvalidSender`), a proof made for another chain (`InvalidChainId`), a registration proof with a swapped public key, registering twice, an unregistered account shielding, a replayed transfer proof, another account submitting a withdraw proof, a withdraw proof with a raised amount, and a replayed withdraw proof. No proof can even be built for unshielding more than the encrypted balance.
+
+## SDK — 13 tests
+
+`eerc.test.ts` (9): keys are scalars below the BabyJubJub subgroup order; a signature always reopens the same key; the key message names the account and chain; the registration hash; PCTs round-trip and interoperate with maci-crypto (which upstream's tests use); a PCT cannot be read with another key; ElGamal round-trip and a forged balance hint refused; withdraw/transfer inputs refuse overspending and zero; snarkjs proofs laid out for the verifier.
+
+`math.test.ts` (4):
 
 Golden curve values identical to the Solidity test; buy/sell/redeem quotes including the floor-priced case; the TypeScript `commitment()` equals `JunoPost.commitmentOf` read with `cast call` from an Anvil deployment; AVAX parsing and formatting.
 
-## Web — 10 tests
+## Web — 13 tests
 
-Position accounting from fill logs (realised/unrealised P&L), the price window, and the QA signer policy: only the public Fuji RPCs, only Juno calls on the factory and its posts (a `transfer` is refused), and the 0.015 AVAX budget.
+Position accounting from fill logs (realised/unrealised P&L), the price window, and the QA signer policy: only the public Fuji RPCs, only Juno calls on the factory and its posts (a `transfer` is refused), and the 0.015 AVAX budget; for the vault, only `register`/`deposit`/`transfer`/`withdraw` with no value, approvals only to the vault, and only the eERC key message for its own account on Fuji.
 
 ## Live runs on Fuji
 
