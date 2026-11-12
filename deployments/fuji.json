@@ -3290,15 +3290,125 @@
         "block": 60950949,
         "confirmMs": 1875,
         "at": "2026-11-12T14:27:49.496Z"
+      },
+      {
+        "label": "configure_per_requester_6",
+        "hash": "0x608c8f1cfcdcfe98b5320867e9543064c0d582ed5431b71da95944198685238a",
+        "status": "success",
+        "note": "owner raised the per-requester daily cap from 3 to 6 (judges on one office network)",
+        "at": "2026-11-12T14:49:12.838253Z"
+      },
+      {
+        "label": "fund_station_hub",
+        "from": "0x25caFd8dA001EEAC9b80931cA3079e08c44124Ed",
+        "hash": "0x3fb7d5e7f85785e30d38d4b57af1c51e471ee05ac1f163db413c1a93f8106bbc",
+        "value": "0.1",
+        "note": "Avalanche funding hub (avax/.hub/fund.sh, logged in avax/.hub/LEDGER.md)"
       }
     ],
     "address": "0x45fdcdf64f6fa312b02b98ad248461c6a02e722a",
     "config": {
       "dripAvax": "0.008",
       "dailyCap": 12,
-      "perRequesterDaily": 3,
+      "perRequesterDaily": 6,
       "relayer": "0x16e8e2ab4ab129389162dD8604E72A49724f6CA9",
       "owner": "0xc01CC03d1110675922A76fdB7406931C1eC167d8"
+    }
+  },
+  "judgeRuns": {
+    "local-1440-first": {
+      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125\u2026, approve 0x46a2fade\u2026).",
+      "url": "http://127.0.0.1:5391",
+      "width": 1440,
+      "slug": "judge-11121449",
+      "steps": [
+        {
+          "step": "launch_post",
+          "hash": "0x24f460f4fd2bf1473894e8baed7bea1a7b42292245447f6dfad224ac5816a1ce",
+          "status": "success",
+          "block": 60951817,
+          "confirmMs": 1835,
+          "blockMs": null
+        },
+        {
+          "step": "sealed_bid",
+          "hash": "0x52d91707d6afb8059202d0d3524a769f0df1f41993d762389c4d48e082c54eb9",
+          "status": "success",
+          "block": 60951822,
+          "confirmMs": 2509,
+          "blockMs": 494
+        },
+        {
+          "step": "reveal",
+          "hash": "0xba98be7bb14c6ef19a1b2bf5e2a248e92fdbbcdab10688fb0a1b698d6abb19e9",
+          "status": "success",
+          "block": 60951851,
+          "confirmMs": 2075,
+          "blockMs": 4
+        },
+        {
+          "step": "settle",
+          "hash": "0x72d98f37a73179454261c91afac9e79b00cbcc57a8f5dac3baa1c2d520cde938",
+          "status": "success",
+          "block": 60951890,
+          "confirmMs": 2105,
+          "blockMs": 152
+        },
+        {
+          "step": "claim_refund",
+          "hash": "0xd9d474046b9198fa2923b71bab25b29bbee855e1e05786f5cfe58c12d5de0cc4",
+          "status": "success",
+          "block": 60951894,
+          "confirmMs": 2096,
+          "blockMs": 172
+        },
+        {
+          "step": "buy_5",
+          "hash": "0x340efa5de9d2c3c24583f89cabea6ad603b583be642375816c8293f3ffcccf5c",
+          "status": "success",
+          "block": 60951895,
+          "confirmMs": 2047,
+          "blockMs": 110
+        },
+        {
+          "step": "sell_2",
+          "hash": "0x039a1ca03a873f3a402a1972702ab3025ac5c769690f99d643a222282e7b96bb",
+          "status": "success",
+          "block": 60951897,
+          "confirmMs": 2481,
+          "blockMs": 174
+        },
+        {
+          "step": "redeem_1",
+          "hash": "0x06e61b11e3b404e864580ffb8a1598a16146570ba247fa9ced4cb7cca99da8aa",
+          "status": "success",
+          "block": 60951901,
+          "confirmMs": 1815,
+          "blockMs": 171
+        },
+        {
+          "step": "register",
+          "hash": "0x1aebfea14d7606b52aad8efd03f2fa97307f1788cdcd08b580e8af82b12dfc45",
+          "status": "success",
+          "block": 60951908,
+          "confirmMs": 2229,
+          "blockMs": 372
+        },
+        {
+          "step": "shield",
+          "hash": "0x9ace85fd9ad5518c9debe4a87a6eaa1930ed55868204e6f2709e43e4ee86b730",
+          "status": "success",
+          "block": 60951912,
+          "confirmMs": 2038,
+          "blockMs": 54
+        }
+      ],
+      "errors": [],
+      "at": "2026-11-12T14:49:42.508Z",
+      "account": "0xA490b422F0351301915d35cD2d24b73F2246a893",
+      "gasTx": "0xf0fb656c5851207713e59d5c83c18bd03dc791351a89d51c4a20579918ca2804",
+      "post": "0xaaCd063342baa3ec967Cc82FfC3EAc91CD086Fc4",
+      "result": "failed at shield: TimeoutError: locator.waitFor: Timeout 180000ms exceeded."
     }
   }
 }

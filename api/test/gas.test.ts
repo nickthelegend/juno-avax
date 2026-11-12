@@ -78,5 +78,5 @@ test('per-IP limiter: the 7th request in an hour from one network is refused (42
 
 test('the station reports its caps and funding on-chain for a requester tag', { timeout: 60_000 }, async () => {
   const room = await pub.readContract({ address: STATION, abi: gasStationAbi, functionName: 'room', args: ['0x' + 'ab'.repeat(32) as Hex] });
-  assert.ok(room[0] <= 12n && room[1] === 3n && room[2] > 0n);
+  assert.ok(room[0] <= 12n && room[1] === 6n && room[2] > 0n);
 });

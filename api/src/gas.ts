@@ -19,7 +19,7 @@ const WHY: Record<string, Reply> = {
   Expired: { status: 400, body: { error: 'The request expired. Try again.' } },
   DeadlineTooFar: { status: 400, body: { error: 'The request deadline is too far ahead (max 1 hour).' } },
   DailyCapReached: { status: 429, body: { error: 'Juno\'s gas sponsor has given out today\'s drips. Try again tomorrow (UTC), or use the Fuji faucet.' } },
-  TagCapReached: { status: 429, body: { error: 'This network already got 3 drips today. Try again tomorrow (UTC), or use the Fuji faucet.' } },
+  TagCapReached: { status: 429, body: { error: 'This network already got 6 drips today. Try again tomorrow (UTC), or use the Fuji faucet.' } },
   Empty: setup('Juno\'s gas sponsor is empty. Top up JunoGasStation on Fuji.'),
 };
 
