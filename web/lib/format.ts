@@ -110,6 +110,8 @@ export function tokens(value: number): string {
   if (value === 0) return "0";
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `${Math.round(value).toLocaleString("en-US")}`;
+  // Post coins have 0 decimals: a whole number reads as one.
+  if (Number.isInteger(value)) return String(value);
   return value.toFixed(value < 1 ? 4 : 2);
 }
 

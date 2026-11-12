@@ -14,6 +14,8 @@ import { fujiClient, juno, type Coin, type FeedItem } from "../lib/api";
 import { CHAIN_ID, describeTxError, EXPLORER_NAME, explorer, sameAddress } from "../lib/chain";
 import { loadMarkets, invalidateMarkets } from "../lib/markets";
 import { useHandle } from "../lib/names";
+import { useBlockCadence } from "../lib/cadence";
+import { seconds, useConfirmations } from "../lib/finality";
 import { useReducedMotion } from "../lib/motion";
 import { amountOf, money, since, splitAmount, useApi } from "../lib/useApi";
 import { useWallet } from "../lib/wallet";
@@ -221,6 +223,7 @@ export function FloorPanel() {
         <View style={s.splitRule} />
         <SplitFigure label="Posts" value={String(posts.length)} hint={`${graduated} graduated`} />
       </View>
+      <FinalityStrip />
 
       {latest ? (
         <Tappable
@@ -244,6 +247,30 @@ export function FloorPanel() {
           <Text style={[s.latestDetail, { flex: 1 }]}>No fills yet. The first auction settles a minute after bidding closes.</Text>
         </View>
       )}
+    </View>
+  );
+}
+
+/**
+ * Avalanche's clock, live: how often Fuji makes a block (from the block
+ * headers' millisecond timestamps) and, once you have traded in this visit,
+ * how long your last call took to land in a final block.
+ */
+function FinalityStrip() {
+  const cadence = useBlockCadence();
+  const confirmations = useConfirmations();
+  const last = confirmations[confirmations.length - 1];
+  return (
+    <View style={s.finality} accessibilityLabel="Avalanche finality, measured">
+      <View style={s.finalityDot} />
+      <Text style={s.finalityText} numberOfLines={1}>
+        {cadence ? `Fuji makes a block every ${seconds(cadence.ms)}` : cadence === null ? "Reading Fuji's block clock…" : "Fuji's block clock did not answer"}
+      </Text>
+      {last ? (
+        <Text style={s.finalityMine} numberOfLines={1}>
+          Your {last.label.toLowerCase()}: final in {seconds(last.blockMs ?? last.ms)}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -490,10 +517,12 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       </Text>
 
       {n.phase === "commit" ? (
-        mine ? (
+        mine && mineOnChain?.exists ? (
           <Text style={f.mine}>
             Your sealed bid: {mine.amount} tokens at up to {amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. The salt stays in this browser until you reveal.
           </Text>
+        ) : busy ? (
+          <Text style={f.mine}>Placing your sealed bid…</Text>
         ) : mineOnChain?.exists ? (
           <Text style={f.mine}>This account already has a sealed bid here, placed from another browser.</Text>
         ) : (
@@ -753,6 +782,10 @@ const s = StyleSheet.create({
   splitLabel: { color: "#A9B3A2", fontSize: theme.type.caption.size },
   splitValue: { color: c.onInk, fontSize: theme.type.body.size, fontWeight: "700", marginTop: 2, ...tabular },
   splitHint: { color: "#7F8A78", fontSize: theme.type.micro.size, marginTop: 1 },
+  finality: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 8, rowGap: 2, marginTop: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(243,247,238,0.16)" },
+  finalityDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.lime },
+  finalityText: { color: c.onInk, fontSize: theme.type.caption.size, fontWeight: "600", ...tabular },
+  finalityMine: { color: c.lime, fontSize: theme.type.caption.size, fontWeight: "700", flexBasis: "100%", paddingLeft: 14, ...tabular },
   latest: { marginTop: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.surface, borderRadius: theme.radius.md, paddingHorizontal: 12, paddingVertical: 10, minHeight: 56 },
   latestTitle: { color: c.text, fontSize: theme.type.label.size, fontWeight: "700", ...tabular },
   latestDetail: { color: c.muted, fontSize: theme.type.caption.size, marginTop: 1 },

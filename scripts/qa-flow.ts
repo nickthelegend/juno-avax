@@ -47,9 +47,10 @@ type Step = { label: string; functionName: string; to: string; value: string; ha
 const steps: Step[] = [];
 let reserved = 0n;
 let currentLabel = 'launch';
+let postAddress: string | null = null;
 const record = () => {
   const data = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
-  data.qaFlow = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts', account: qa.address, slug, width: WIDTH, steps };
+  data.qaFlow = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts', account: qa.address, slug, post: postAddress, width: WIDTH, steps };
   writeFileSync(join(ROOT, 'deployments/fuji.json'), `${JSON.stringify(data, null, 2)}\n`);
 };
 
@@ -58,7 +59,9 @@ async function authorize(call: QaChecked): Promise<number> {
   reserved = reserveQaBudget(reserved, BigInt(call.value), 2_000_000n, gasPrice > 0n ? gasPrice : 1n);
   const balance = await pub.getBalance({ address: qa.address });
   if (balance < BigInt(call.value)) throw Error('Stopped: the QA account is too low for this call.');
-  steps.push({ label: currentLabel, functionName: call.functionName, to: call.to, value: call.value });
+  // Labelled by the call itself: the UI can move on before a wallet call is authorized.
+  const n = steps.filter((x) => x.functionName === call.functionName).length;
+  steps.push({ label: n ? `${call.functionName}_${n + 1}` : call.functionName, functionName: call.functionName, to: call.to, value: call.value });
   record();
   say(`authorize ${currentLabel}: ${call.functionName} value ${formatEther(BigInt(call.value))} (reserved ${formatEther(reserved)})`);
   return steps.length - 1;
@@ -127,6 +130,8 @@ try {
       await button('Connect QA signer').click();
       await page.waitForURL(/\/coin\/0x/, { timeout: 90_000 });
       const post = page.url().split('/coin/')[1]!.split(/[?#]/)[0]!;
+      postAddress = post;
+      record();
       say(`post ${post}`);
 
       // 2. Sealed bid inside the first minute.

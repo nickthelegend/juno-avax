@@ -80,9 +80,15 @@ export default function SocialScreen() {
   }, []);
 
   const posts = useMemo(() => {
-    const all = [...(markets.data?.posts ?? [])].sort(
-      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
-    );
+    // Bump order, as on pump.fun: a live opening auction first (it only lasts
+    // two minutes), then the post that traded most recently.
+    const live = (coin: Coin) => coin.onchain.phase === "commit" || coin.onchain.phase === "reveal" || coin.onchain.phase === "settle";
+    const lastMove = (coin: Coin) => Math.max(Date.parse(coin.createdAt), ...(coin.priceHistory ?? []).map((p) => Date.parse(p.t)));
+    const all = [...(markets.data?.posts ?? [])].sort((a, b) => Number(live(b)) - Number(live(a)) || lastMove(b) - lastMove(a));
+    // Never the same picture twice in a row.
+    for (let i = 1; i < all.length - 1; i++) {
+      if (all[i]!.media.url === all[i - 1]!.media.url) [all[i], all[i + 1]] = [all[i + 1]!, all[i]!];
+    }
     if (scope !== "following") return all;
     const set = follows.data;
     return set ? all.filter((coin) => set.has(coin.creator.wallet)) : [];
