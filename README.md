@@ -10,7 +10,7 @@ Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b3
 
 ## Try it
 
-The hosted web app is deployed by the orchestrator after review; until then run it locally (Node 20+, pnpm 10):
+Live app: **https://juno-avax.vercel.app** (Fuji testnet; static export of `e59d313`). To run it locally (Node 20+, pnpm 10):
 
 ```bash
 pnpm install

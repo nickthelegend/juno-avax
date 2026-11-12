@@ -46,7 +46,7 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 ## Links
 
 - Repo: (GitHub link — Nick to push)
-- Live app: (Vercel link — orchestrator deploys after review)
+- Live app: https://juno-avax.vercel.app (Fuji testnet)
 - Demo video (≤ 3 min): (to record)
 - Slides: `docs/SLIDES.md`
 - JunoFactory on Snowtrace: https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539
