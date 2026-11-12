@@ -165,6 +165,9 @@ export function BottomSheet({
   const pan = useMemo(
     () =>
       Gesture.Pan()
+        // The callbacks drive an RN Animated value and refs, so they run on the JS thread (gesture-handler 3
+        // defaults to worklets, which cannot touch either).
+        .runOnJS(true)
         .enabled(dismissable)
         // Only take over once it is clearly a vertical drag, so a finger that
         // came down to press a row inside the sheet still presses it.

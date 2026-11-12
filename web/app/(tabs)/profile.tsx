@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Linking, RefreshControl, ScrollView } from "react-native";
+import { Linking, Platform, RefreshControl, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import styled from "styled-components/native";
 
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
         <Placeholder
           art
           title="No wallet yet"
-          detail={`Connect Core or MetaMask, or use a Juno wallet with free test AVAX. ${NETWORK_LABEL}.`}
+          detail={`${Platform.OS === "web" ? "Connect Core or MetaMask, or use a Juno wallet" : "Use a Juno wallet"} with free test AVAX. ${NETWORK_LABEL}.`}
           action={
             // Not `.then(portfolio.refresh)`: that refresh was captured before
             // the wallet existed, re-ran the read with no address, and its

@@ -291,15 +291,20 @@ const MAX_CAPTION = 400;
 
 /** Juno's art as a grid to pick from, then the pick previewed at its own shape. */
 function MediaPicker({ media, onPick, disabled }: { media: string | null; onPick: (path: string | null) => void; disabled: boolean }) {
+  // Yoga on iOS (RN 0.88) gives a percentage-wide cell no height from aspectRatio, so the height is set from the
+  // grid's measured width (the same 31% the web renders).
+  const [cell, setCell] = useState<number | null>(null);
   if (!media) {
     return (
       <View style={[styles.drop, { paddingVertical: 18 }]}>
         <Text style={styles.dropTitle}>Pick the art</Text>
-        <View style={styles.grid}>
+        <View style={styles.grid} onLayout={(e) => setCell(Math.floor(0.31 * (e.nativeEvent.layout.width - 28)))}>
           {ART.map((path) => (
-            <Pressable key={path} onPress={() => onPick(path)} disabled={disabled} accessibilityRole="button" accessibilityLabel={`Use ${path}`} style={styles.cell}>
-              <ExpoImage source={{ uri: `${APP_URL}${path}` }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            </Pressable>
+            <View key={path} style={[styles.cell, cell ? { height: cell } : null]}>
+              <Pressable onPress={() => onPick(path)} disabled={disabled} accessibilityRole="button" accessibilityLabel={`Use ${path}`} style={StyleSheet.absoluteFill}>
+                <ExpoImage source={{ uri: `${APP_URL}${path}` }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              </Pressable>
+            </View>
           ))}
         </View>
         <Text style={styles.dropBlurb}>Square works best.</Text>

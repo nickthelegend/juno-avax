@@ -19,6 +19,7 @@ import { seconds, useConfirmations } from "../lib/finality";
 import { useReducedMotion } from "../lib/motion";
 import { amountOf, money, since, splitAmount, useApi } from "../lib/useApi";
 import { useWallet } from "../lib/wallet";
+import { loadSecret, readSecret, removeSecret, writeSecret } from "../lib/bid-secrets";
 import { theme } from "../theme";
 
 /**
@@ -315,29 +316,6 @@ export function FloorChip({ coin, tone = "light" }: { coin: Coin; tone?: "light"
 /* Coin page cards                                                     */
 /* ------------------------------------------------------------------ */
 
-type BidSecret = { amount: string; maxPrice: string; salt: Hex };
-function secretKey(token: string, account: string) {
-  return `juno-avax-bid:${token.toLowerCase()}:${account.toLowerCase()}`;
-}
-function readSecret(token: string, account: string): BidSecret | null {
-  try {
-    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
-      const raw = localStorage.getItem(secretKey(token, account));
-      return raw ? (JSON.parse(raw) as BidSecret) : null;
-    }
-  } catch {
-    /* storage refused */
-  }
-  return null;
-}
-function writeSecret(token: string, account: string, secret: BidSecret) {
-  try {
-    if (Platform.OS === "web" && typeof localStorage !== "undefined") localStorage.setItem(secretKey(token, account), JSON.stringify(secret));
-  } catch {
-    /* storage refused */
-  }
-}
-
 /**
  * The sealed-bid opening auction, as a coin-page card.
  *
@@ -361,6 +339,18 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
   const [hash, setHash] = useState<{ hash: string; ms: number | null } | null>(null);
   const [mineOnChain, setMineOnChain] = useState<{ exists: boolean; revealed: boolean; refund: number; allocated: number } | null>(null);
   const pendingBidAccount = useRef<string | null>(null);
+  // On a phone the bid's salt is kept in the keychain; read it back before showing the reveal.
+  const [, setSecretLoaded] = useState(0);
+  useEffect(() => {
+    if (!wallet.address) return;
+    let live = true;
+    void loadSecret(coin.address, wallet.address).then((found) => {
+      if (live && found) setSecretLoaded((n) => n + 1);
+    });
+    return () => {
+      live = false;
+    };
+  }, [wallet.address, coin.address]);
 
   // A phase boundary passing on screen is a reason to re-read.
   useEffect(() => {
@@ -398,7 +388,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       if (label === "Bid" && pendingBidAccount.current && failure.cancelled) {
         // A cancelled approval cannot have submitted this commitment.
         try {
-          if (typeof localStorage !== "undefined") localStorage.removeItem(secretKey(coin.address, pendingBidAccount.current));
+          removeSecret(coin.address, pendingBidAccount.current);
         } catch { /* storage refused */ }
         pendingBidAccount.current = null;
       }

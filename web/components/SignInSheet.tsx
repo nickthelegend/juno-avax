@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, Linking } from "react-native";
+import { Image, Linking, Platform } from "react-native";
 import styled from "styled-components/native";
 
 import { BottomSheet } from "./BottomSheet";
@@ -69,7 +69,7 @@ export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; on
           <Hint>Looking for wallets…</Hint>
         ) : (
           <>
-            {wallets.some((w) => w.id !== LOCAL_ID) ? null : <Body>No browser wallet found. Use a Juno wallet to try it now.</Body>}
+            {wallets.some((w) => w.id !== LOCAL_ID) || Platform.OS !== "web" ? null : <Body>No browser wallet found. Use a Juno wallet to try it now.</Body>}
             <List>
               {wallets.map((w) => {
                 const isLocal = w.id === LOCAL_ID;
@@ -79,7 +79,7 @@ export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; on
                       {isLocal ? <JunoIcon size={32} radius={8} /> : w.icon ? <Image source={{ uri: w.icon }} style={{ width: 32, height: 32, borderRadius: 8 }} accessibilityIgnoresInvertColors /> : <Blank />}
                       <Names>
                         <Name numberOfLines={1}>{w.name}</Name>
-                        {isLocal ? <Sub numberOfLines={1}>Test wallet in {KEY_HOME} · free test AVAX</Sub> : null}
+                        {isLocal ? <Sub numberOfLines={1}>Kept on {KEY_HOME} · free test AVAX</Sub> : null}
                       </Names>
                       <Go>{busy === w.id ? (isLocal ? status ?? "Opening…" : "Approve in wallet…") : isLocal ? "Use" : "Connect"}</Go>
                     </Row>
@@ -87,7 +87,7 @@ export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; on
                 );
               })}
             </List>
-            {wallets.some((w) => w.id !== LOCAL_ID) ? null : (
+            {wallets.some((w) => w.id !== LOCAL_ID) || Platform.OS !== "web" ? null : (
               <Button label="Get Core wallet" variant="quiet" onPress={() => void Linking.openURL("https://core.app")} />
             )}
           </>

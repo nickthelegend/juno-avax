@@ -50,10 +50,13 @@ export class ApiError extends Error {
   }
 }
 
-/** Where relative media paths (the seeded posts' art) resolve. */
+/** The hosted web app, which serves the seeded posts' art to the native app. */
+export const HOSTED_APP_URL = "https://juno-avax.vercel.app";
+
+/** Where relative media paths (the seeded posts' art) resolve: this page's origin on web, the hosted app on a phone. */
 export const APP_URL =
-  process.env.EXPO_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-  (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "");
+  process.env.EXPO_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+  (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : HOSTED_APP_URL);
 
 /** Kept for the share link and anything that names the app's own origin. */
 export const API_URL = APP_URL;

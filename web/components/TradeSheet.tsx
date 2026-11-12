@@ -197,6 +197,8 @@ export function TradeSheet({
                 $on={side === id}
                 $buy={id !== "sell"}
                 onPress={() => {
+                  // A receipt belongs to the side that made it: switching tabs starts a new trade.
+                  if (stage === "done") setStage("entry");
                   setSide(id);
                   setQuote(null);
                   setError(null);

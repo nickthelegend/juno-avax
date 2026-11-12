@@ -175,10 +175,10 @@ export function FeedCard({
             <View style={styles.worth}>
               {change === null || auction ? null : <TriangleGlyph up={change >= 0} color={tone} size={11} />}
               <Text style={[styles.worthText, { color: auction ? theme.colors.muted : tone }]}>
-                {auction ? "200 for sale" : shortAvax(coin.marketCapQuote ?? coin.marketCap)}
+                {auction ? "200" : shortAvax(coin.marketCapQuote ?? coin.marketCap)}
               </Text>
             </View>
-            <Text style={styles.worthUnit}>{auction ? "sealed bids" : "AVAX market cap"}</Text>
+            <Text style={styles.worthUnit}>{auction ? "for sale" : "AVAX market cap"}</Text>
           </View>
         </Tappable>
 

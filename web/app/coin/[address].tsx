@@ -343,7 +343,6 @@ export default function CoinScreen() {
               {coin.onchain.phase === "curve" || coin.onchain.phase === "graduated" ? <AuctionCard coin={coin} onChanged={detail.refresh} /> : null}
               <DareCard coin={coin} onChanged={detail.refresh} />
               <AskRow onOpen={() => setAsking(true)} />
-              <AskSheet visible={asking} onClose={() => setAsking(false)} coin={coin.address} symbol={coin.symbol} />
               <PrivateBagsRow
                 shielded={detail.data!.holders.find((h) => VAULT && sameAddress(h.wallet, VAULT.encryptedERC))?.balance ?? 0}
                 symbol={coin.symbol}
@@ -471,6 +470,8 @@ export default function CoinScreen() {
             />
           ) : null}
 
+          {/* Over the whole screen, like the trade sheet (a sheet inside the scroll view is clipped to it). */}
+          <AskSheet visible={asking} onClose={() => setAsking(false)} coin={coin.address} symbol={coin.symbol} />
         </>
       )}
     </Page>

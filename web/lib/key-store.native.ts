@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 const KEY = "juno-avax.local-wallet.v1";
 const OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY };
 
-export const KEY_HOME = "this phone's keychain";
+export const KEY_HOME = "this phone";
 
 export async function readKey(): Promise<string | null> {
   return SecureStore.getItemAsync(KEY, OPTS);

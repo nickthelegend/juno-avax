@@ -3316,8 +3316,212 @@
     }
   },
   "judgeRuns": {
+    "375": {
+      "note": "Hosted app, fresh browser profile, Juno wallet + JunoGasStation, driven by scripts/qa-hosted-judge.ts",
+      "url": "https://juno-avax.vercel.app",
+      "width": 375,
+      "slug": "judge-11121503",
+      "steps": [
+        {
+          "step": "launch_post",
+          "hash": "0x97cdf3d65337c6be9c9e3007fdc41206f3f4a799202f9b62b3c0d464acd3d820",
+          "status": "success",
+          "block": 60952385,
+          "confirmMs": 2078,
+          "blockMs": 211
+        },
+        {
+          "step": "sealed_bid",
+          "hash": "0x94611c21e1bbf53c1bf81d45ce56b89df257558935176c8d4bcdddf3ebb70b87",
+          "status": "success",
+          "block": 60952388,
+          "confirmMs": 2679,
+          "blockMs": 189
+        },
+        {
+          "step": "reveal",
+          "hash": "0xf28915bd500344c5b6d1f98dd51906403f3f843e77af18a0a4f3d5964e1512aa",
+          "status": "success",
+          "block": 60952430,
+          "confirmMs": 1649,
+          "blockMs": 20
+        },
+        {
+          "step": "settle",
+          "hash": "0x58ba485e4bdc14beedde0131cc82a8ea821a2b328d37d6e0d1de94c9d1ede46f",
+          "status": "success",
+          "block": 60952465,
+          "confirmMs": 3154,
+          "blockMs": 760
+        },
+        {
+          "step": "claim_refund",
+          "hash": "0x6c99d6a6d1e479fc03d019a4fbc277cb33b04556b993749b64ca1b679700c627",
+          "status": "success",
+          "block": 60952468,
+          "confirmMs": 2055,
+          "blockMs": 25
+        },
+        {
+          "step": "buy_5",
+          "hash": "0x5767eed4ff32fc570cfd9acc53b31beadf99614c32a26e80f1e98580149b8336",
+          "status": "success",
+          "block": 60952472,
+          "confirmMs": 2473,
+          "blockMs": 157
+        },
+        {
+          "step": "sell_2",
+          "hash": "0x5fb58d9ef2bb44c9bb79d837c0ab8fddcb40c5e34e5d5083ac54bd43e665920e",
+          "status": "success",
+          "block": 60952480,
+          "confirmMs": 1854,
+          "blockMs": 94
+        },
+        {
+          "step": "redeem_1",
+          "hash": "0x8cee145f2e3e524bb29c19c5223c94f1b24095253bf586a56c944699014996f5",
+          "status": "success",
+          "block": 60952486,
+          "confirmMs": 2233,
+          "blockMs": 120
+        },
+        {
+          "step": "register",
+          "hash": "0x3b0709283c36e73154897617cb801175f704f812890d64b2d3c2c09939325a16",
+          "status": "success",
+          "block": 60952495,
+          "confirmMs": 2480,
+          "blockMs": 636
+        },
+        {
+          "step": "shield",
+          "hash": "0xaa4c776340cafd4dcc75e3bd7b9a43af4239e096368c93810d38b80fd58da8ec",
+          "status": "success",
+          "block": 60952498,
+          "confirmMs": 2064,
+          "blockMs": 104
+        },
+        {
+          "step": "shield",
+          "hash": "0x2cebdc8adff04a1366509c9611c598a76e9074a45090c13d6aa40ff64d846ebb",
+          "status": "success",
+          "block": 60952500,
+          "confirmMs": 2025,
+          "blockMs": 72
+        }
+      ],
+      "errors": [],
+      "at": "2026-11-12T15:03:32.351Z",
+      "account": "0x1ffaC8257700d5618Ca600FFA0b05fA5Ea306E04",
+      "gasTx": "0x8a371148d21f1e43e60dccd0c3d9d5014f02b37ff1f78f1c6e328f39f997e81c",
+      "post": "0xEbE044484A55e968650642286baf82742625CD13",
+      "result": "complete"
+    },
+    "1440": {
+      "note": "Hosted app, fresh browser profile, Juno wallet + JunoGasStation, driven by scripts/qa-hosted-judge.ts",
+      "url": "https://juno-avax.vercel.app",
+      "width": 1440,
+      "slug": "judge-11121457",
+      "steps": [
+        {
+          "step": "launch_post",
+          "hash": "0x268dc3cf7a80afa3395e02f192ffd0e6e3fc59c9fad9c77466aaecd3a664d1e1",
+          "status": "success",
+          "block": 60952253,
+          "confirmMs": 2278,
+          "blockMs": 451
+        },
+        {
+          "step": "sealed_bid",
+          "hash": "0xd0b43ae3114e689774d44c0cb312714ec9d82c77dcab086369c7cf64168d3bfa",
+          "status": "success",
+          "block": 60952261,
+          "confirmMs": 2473,
+          "blockMs": 826
+        },
+        {
+          "step": "reveal",
+          "hash": "0x4d5cf9e5fc00f37202cd6cb3c021417e58cb6cce9dccac3136d2b1438dd0ee86",
+          "status": "success",
+          "block": 60952294,
+          "confirmMs": 1860,
+          "blockMs": 28
+        },
+        {
+          "step": "settle",
+          "hash": "0x7dfd295adad938625831baf65317b1f70e6f1cdf1f04cbbb37aa4e05f131199f",
+          "status": "success",
+          "block": 60952331,
+          "confirmMs": 2265,
+          "blockMs": 244
+        },
+        {
+          "step": "claim_refund",
+          "hash": "0x813ef30d7760b790cd465738ff21283e2c157d1747e3e88c8babac78ae319a12",
+          "status": "success",
+          "block": 60952333,
+          "confirmMs": 2241,
+          "blockMs": 582
+        },
+        {
+          "step": "buy_5",
+          "hash": "0x47a1d2f619fa94733889c171ebfa27cda9f66c42c58bf5c6c9cc8c35d5f72563",
+          "status": "success",
+          "block": 60952337,
+          "confirmMs": 2243,
+          "blockMs": 254
+        },
+        {
+          "step": "sell_2",
+          "hash": "0x25387dc645937e18a0fe8162b10f271f6dfbb7620e77d9fb2134b01f7c3c79be",
+          "status": "success",
+          "block": 60952343,
+          "confirmMs": 2013,
+          "blockMs": 371
+        },
+        {
+          "step": "redeem_1",
+          "hash": "0xd1deccc2422f40a4ee0d9d64e1a05c873d6ed7d315c9cfe727604d29c6d3ec6c",
+          "status": "success",
+          "block": 60952349,
+          "confirmMs": 2452,
+          "blockMs": 516
+        },
+        {
+          "step": "register",
+          "hash": "0x48ed1190538c6281c2bb583058ccb1052c9b68e45a03941196e5705212966a69",
+          "status": "success",
+          "block": 60952357,
+          "confirmMs": 2278,
+          "blockMs": 326
+        },
+        {
+          "step": "shield",
+          "hash": "0xf890b83e202f22bf59baeba61a4fa69bbd57eac369200720cbdecd2cc365d388",
+          "status": "success",
+          "block": 60952361,
+          "confirmMs": 1854,
+          "blockMs": 150
+        },
+        {
+          "step": "shield",
+          "hash": "0x9f323374ada389ba03d04dd54e64e93098772b9f9514ab4058a3544d667a1846",
+          "status": "success",
+          "block": 60952365,
+          "confirmMs": 2866,
+          "blockMs": 982
+        }
+      ],
+      "errors": [],
+      "at": "2026-11-12T14:57:40.527Z",
+      "account": "0x14D1BB5Ed45f4Dff3A03976dD4A8feD616dD976b",
+      "gasTx": "0x3e9c7e612eb724c984b427cd09da5eb133328973b5a9f62fb2fd9f817c72c14a",
+      "post": "0x2a092dB48C3bd315Af9911B82CcADa54cD89F78C",
+      "result": "complete"
+    },
     "local-1440-first": {
-      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125\u2026, approve 0x46a2fade\u2026).",
+      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125…, approve 0x46a2fade…).",
       "url": "http://127.0.0.1:5391",
       "width": 1440,
       "slug": "judge-11121449",
@@ -3410,5 +3614,49 @@
       "post": "0xaaCd063342baa3ec967Cc82FfC3EAc91CD086Fc4",
       "result": "failed at shield: TimeoutError: locator.waitFor: Timeout 180000ms exceeded."
     }
+  },
+  "iosRun": {
+    "note": "iOS Simulator (iPhone 17 Pro), Expo Go 58, Metro on 8092. A new Juno wallet in the keychain got its 0.008 AVAX drip in one tap, launched a post, sealed a bid, then (after a reload lost the in-memory salt, fixed by keeping the salt in the keychain) let the auction settle with the bid unrevealed (refunded minus 1%), then bought 5 and sold 5 on the curve.",
+    "account": "0x221070CE3Bb9D3061a17dd2bB8aa5D8aB1D76898",
+    "post": "0xbEB29448f99524e20Ab3d52dFfB716Dc253555D2",
+    "steps": [
+      {
+        "step": "drip (JunoGasStation, relayed by Juno API)",
+        "hash": "0xe76378f9442dd190f189d2e0c0278a0f19a4fcd1a8f72f2cfe895852e6992099",
+        "status": "success",
+        "block": 60952347
+      },
+      {
+        "step": "createPost",
+        "hash": "0x9f9fe5776ea041153843bb2b9bd417187f3ff4c87508ec0b59a9cdacdcf8d501",
+        "status": "success",
+        "block": 60952461
+      },
+      {
+        "step": "commit",
+        "hash": "0xffbbe8d11b3f56b4c238f7a4c50a5f79c470e00cea64c6b7bc0c58d3d38d8d49",
+        "status": "success",
+        "block": 60952489
+      },
+      {
+        "step": "settle",
+        "hash": "0x0bbb3f01baf1ada722b973ee55a64170ec3c296b5fa140a0497f649355fc123d",
+        "status": "success",
+        "block": 60952573
+      },
+      {
+        "step": "buy",
+        "hash": "0x2950adef96fd0e47bfc8812354d109a048f8fcf03dcb64be564e3fb75126415a",
+        "status": "success",
+        "block": 60952584
+      },
+      {
+        "step": "sell",
+        "hash": "0xfcc3e81859636eb21e992fec38afe21e509dab571492445a78b830461fb02e33",
+        "status": "success",
+        "block": 60952621
+      }
+    ],
+    "at": "2026-11-12T15:09:32.072Z"
   }
 }
