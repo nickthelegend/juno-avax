@@ -211,7 +211,8 @@ export type BidView = {
 export function client(rpcs: string[] = [FUJI_RPC]): PublicClient {
   return createPublicClient({
     chain: fuji,
-    transport: fallback(rpcs.map((url) => http(url, { batch: { wait: 16 }, timeout: 12_000, retryCount: 2 }))),
+    // The public Fuji endpoint answers HTTP 500 to a JSON-RPC batch of ~64+ calls; keep batches at 32.
+    transport: fallback(rpcs.map((url) => http(url, { batch: { wait: 16, batchSize: 32 }, timeout: 12_000, retryCount: 2 }))),
     pollingInterval: 250,
   }) as PublicClient;
 }

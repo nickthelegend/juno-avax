@@ -2793,6 +2793,66 @@
     "at": "2026-11-12T11:05:53.993Z"
   },
   "qaVaultRuns": {
+    "375": {
+      "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs",
+      "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
+      "coin": "0x1701D2B17613242E978841349cf316938118010F",
+      "width": 375,
+      "steps": [
+        {
+          "label": "shield",
+          "functionName": "approve",
+          "to": "0x1701D2B17613242E978841349cf316938118010F",
+          "value": "0",
+          "hash": "0x3e8773ff8784fab79a0d8f1add654d1322f7b16a161dac72c6b56495f1e35843",
+          "status": "success",
+          "block": 60943812,
+          "confirmMs": 1624,
+          "blockMs": 85,
+          "gasUsed": 45924,
+          "at": "2026-11-12T11:23:18.778Z"
+        },
+        {
+          "label": "shield",
+          "functionName": "deposit",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0x0a31ade5d76673926f2581b86d5e72a38a7d7ceff40adf4cedc2861676943bac",
+          "status": "success",
+          "block": 60943813,
+          "confirmMs": 1984,
+          "blockMs": 182,
+          "gasUsed": 429839,
+          "at": "2026-11-12T11:23:22.208Z"
+        },
+        {
+          "label": "send_private",
+          "functionName": "transfer",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0xb83db8f96e6f29689c40588f3433f2e8d41294c42602fa0808ee7701988a2149",
+          "status": "success",
+          "block": 60943818,
+          "confirmMs": 1925,
+          "blockMs": 836,
+          "gasUsed": 939235,
+          "at": "2026-11-12T11:23:31.731Z"
+        },
+        {
+          "label": "unshield",
+          "functionName": "withdraw",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0x8058b1767517ddf64fbbc8a7f9bb06da93cd9b931f4da2c5320f5119b85b25a7",
+          "status": "success",
+          "block": 60943826,
+          "confirmMs": 1598,
+          "blockMs": 202,
+          "gasUsed": 575968,
+          "at": "2026-11-12T11:23:39.314Z"
+        }
+      ]
+    },
     "1440": {
       "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs",
       "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
