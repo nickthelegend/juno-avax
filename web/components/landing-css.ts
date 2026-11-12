@@ -24,7 +24,7 @@ export const LANDING_CSS = `
   --mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --ease: cubic-bezier(.22, 1, .36, 1);
   --gut: clamp(16px, 4vw, 48px);
-  flex: 1; min-height: 0; height: 100%; width: 100%;
+  position: relative; flex: 1; min-height: 0; height: 100%; width: 100%;
   overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth;
   background: var(--ink); color: var(--on-ink);
   font-family: var(--sans); font-size: 16px; line-height: 1.5;
@@ -135,7 +135,7 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
 .jl-skel { background: linear-gradient(90deg, rgba(255,255,255,.55), rgba(255,255,255,.9), rgba(255,255,255,.55)); background-size: 200% 100%; animation: jl-shimmer 1.4s linear infinite; box-shadow: none; }
 @keyframes jl-shimmer { to { background-position: -200% 0; } }
 .jl-empty { grid-column: 1 / -1; padding: 22px; border-radius: 22px; background: var(--surface); color: var(--muted); }
-.jl-err { padding: 18px 20px; border-radius: 18px; background: ${c.negSoft}; color: ${c.neg}; font-weight: 600; overflow-wrap: anywhere; }
+.jl .jl-err { padding: 18px 20px; border-radius: 18px; background: ${c.negSoft}; color: ${c.neg}; font-weight: 600; overflow-wrap: anywhere; }
 .jl-empty, .jl-err { display: flex; align-items: center; gap: 16px; }
 .jl-obj { flex: none; width: 64px; height: 64px; object-fit: contain; user-select: none; pointer-events: none; }
 
@@ -201,6 +201,32 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
 .jl-tech a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; overflow-wrap: anywhere; }
 .jl-tech a:hover { text-decoration-color: var(--text); }
 
+/* get the app */
+#get-app { padding-top: 112px; }
+.jl-get { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.jl-get article { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; padding: 28px; border-radius: 26px; background: var(--surface); box-shadow: 0 1px 0 rgba(42,51,38,.04), 0 10px 30px -20px rgba(42,51,38,.3); }
+.jl-get h3 { font-weight: 800; font-size: 21px; letter-spacing: -.03em; line-height: 1.15; }
+.jl-get-meta { color: var(--muted); font-size: 15px; margin-top: -6px !important; }
+.jl-get .jl-pill { margin-top: 4px; }
+.jl-pill-ink { background: var(--ink); color: var(--on-ink); }
+.jl-pill-ink:hover { background: var(--ink2); }
+.jl-cmd { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 6px 6px 12px; border-radius: 14px; background: var(--alt); }
+.jl-cmd code { flex: 1; min-width: 0; padding: 0; background: none; font-size: 12.5px; overflow-wrap: anywhere; }
+.jl-cmd button { flex: none; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--surface); color: var(--text); font: 700 13px var(--sans); cursor: pointer; }
+.jl-cmd button:hover { background: var(--paper); }
+.jl-cmd button:focus-visible { outline: 3px solid ${c.focus}; outline-offset: 2px; }
+.jl-get-note { font-size: 13.5px; color: var(--muted); }
+.jl-get-note a { font-family: var(--mono); font-size: 12.5px; color: var(--text); text-underline-offset: 3px; }
+.jl-get .jl-skel { width: 100%; min-height: 60px; }
+.jl-get .jl-err { font-size: 14px; }
+.jl-qr { display: grid; gap: 10px; justify-items: start; }
+.jl-qr img { width: 148px; height: 148px; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); }
+.jl-qr a { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.jl .jl-setup { display: grid; gap: 4px; width: 100%; padding: 16px 18px; border-radius: 18px; border: 1.5px dashed var(--line2); }
+.jl-setup b { font-weight: 800; font-size: 15px; }
+.jl-setup span { font-size: 14px; color: var(--muted); }
+.jl-more-row { display: flex; flex-wrap: wrap; gap: 4px 28px; }
+
 /* end + footer */
 .jl-end { background: var(--ink); padding: 120px 0 40px; position: relative; }
 .jl-end::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 14px; background: var(--sage); clip-path: ${TEAR_EDGE}; rotate: 180deg; }
@@ -221,6 +247,7 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 1080px) {
   .jl-tape-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .jl-tech { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .jl-get { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .st-camera { right: 30%; top: 9%; }
 }
 @media (max-width: 860px) {
@@ -267,6 +294,9 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
   .st-phone-coin { display: none; }
   .jl-tech { grid-template-columns: 1fr; }
   .jl-tech article { padding: 22px; }
+  .jl-get { grid-template-columns: 1fr; }
+  .jl-get article { padding: 22px; }
+  #get-app { padding-top: 88px; }
   #tech { padding-top: 88px; padding-bottom: 104px; }
   .jl-end { padding-top: 96px; }
 }

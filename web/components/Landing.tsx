@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import type { Coin } from "../lib/api";
-import { explorer, FACTORY, NETWORK_NAME } from "../lib/chain";
+import { explorer, FACTORY } from "../lib/chain";
 import { DEPLOYMENT } from "../lib/deployment";
 import { useBlockCadence } from "../lib/cadence";
 import { loadMarkets } from "../lib/markets";
+import { qrDataUrl } from "../lib/qr";
 import { useApi } from "../lib/useApi";
 import { LANDING_CSS } from "./landing-css";
 
@@ -120,6 +121,88 @@ function External() {
   );
 }
 
+/** `/download/manifest.json`, written by `web/scripts/build-ios-sim.sh` and `web/scripts/publish-expo.sh`. */
+type Manifest = {
+  ios?: { file: string; bytes: number; sha256: string; version: string; built: string; bundleId: string };
+  expo?: { url: string | null };
+};
+
+const mb = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
+
+/** Get the app: the iOS Simulator build, Expo Go (only once a real update link exists) and the web app. */
+function GetApp({ go }: { go: (path: string) => (e: React.MouseEvent) => void }) {
+  const [m, setM] = useState<Manifest | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    fetch("/download/manifest.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j: Manifest) => setM(j))
+      .catch((e: Error) => setErr(e.message));
+  }, []);
+  const expo = m?.expo?.url ?? null;
+  useEffect(() => {
+    if (expo) qrDataUrl(expo).then(setQr).catch(() => setQr(null));
+  }, [expo]);
+  const ios = m?.ios;
+  const install = ios ? `xcrun simctl install booted ${ios.file.replace(/-iOS-Simulator\.zip$/, "")}.app` : "";
+  const copy = () => {
+    navigator.clipboard?.writeText(install).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }).catch(() => {});
+  };
+
+  return (
+    <section className="jl-sec" id="get-app" aria-labelledby="jl-get-title">
+      <div className="jl-wrap">
+        <header className="jl-head">
+          <p className="jl-lbl">Get the app</p>
+          <h2 id="jl-get-title">Juno is a phone app.</h2>
+        </header>
+        <div className="jl-get">
+          <article>
+            <h3>iOS Simulator</h3>
+            <p className="jl-get-meta">{ios ? `For a Mac with Xcode · ${mb(ios.bytes)} · v${ios.version}` : err ? "Download unavailable" : "Loading…"}</p>
+            {ios ? (
+              <>
+                <a className="jl-pill jl-pill-ink" href={`/download/${ios.file}`} download>Download for iOS Simulator</a>
+                <div className="jl-cmd">
+                  <code>{install}</code>
+                  <button type="button" onClick={copy} aria-label="Copy the install command">{copied ? "Copied" : "Copy"}</button>
+                </div>
+                <p className="jl-get-note">Unzip, open a simulator, run the line. <a href={`/download/${ios.file}.sha256`} title={ios.sha256}>SHA-256 {ios.sha256.slice(0, 12)}…</a></p>
+              </>
+            ) : err ? (
+              <p className="jl-err" role="alert">Could not load the download list: {err}</p>
+            ) : (
+              <span className="jl-chip jl-skel" />
+            )}
+          </article>
+          <article>
+            <h3>Expo Go</h3>
+            <p className="jl-get-meta">Scan with your phone&apos;s camera</p>
+            {expo && qr ? (
+              <div className="jl-qr">
+                <img src={qr} width={148} height={148} alt="QR code that opens Juno in Expo Go" />
+                <a href={expo}>{expo.replace(/^exp:\/\//, "")}</a>
+              </div>
+            ) : (
+              <p className="jl-setup"><b>Setup required</b><span>The Expo Go link appears here once Juno is published.</span></p>
+            )}
+          </article>
+          <article>
+            <h3>In your browser</h3>
+            <p className="jl-get-meta">Nothing to install</p>
+            <a href="/social" onClick={go("/(tabs)/social")} className="jl-pill jl-pill-lime">Open Juno</a>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Landing() {
   const router = useRouter();
   const markets = useApi(() => loadMarkets(), []);
@@ -170,6 +253,7 @@ export default function Landing() {
         <a href="/" className="jl-brand" aria-label="Juno home"><Mark size={26} /><span>juno</span></a>
         <nav aria-label="Primary">
           <a href="#how" onClick={jump("how")} className="jl-link">How it works</a>
+          <a href="#get-app" onClick={jump("get-app")} className="jl-link">Get the app</a>
           <a href="/social" onClick={go("/(tabs)/social")} className="jl-pill jl-pill-white">Open app</a>
         </nav>
       </header>
@@ -194,11 +278,7 @@ export default function Landing() {
             <h1 id="jl-title">Every post<br />is a coin<span className="jl-dot">.</span></h1>
             <a href="/social" onClick={go("/(tabs)/social")} className="jl-pill jl-pill-lime jl-pill-xl">Open Juno</a>
             <p className="jl-sub">
-              {posts
-                ? <>Live on {NETWORK_NAME}. {posts.length} posts trading, each its own coin, with test AVAX only.</>
-                : failed
-                  ? <>Live on {NETWORK_NAME}, with test AVAX only.</>
-                  : <>A social feed on {NETWORK_NAME}, with test AVAX only.</>}
+              Post a photo and fans can buy in. Each post is its own coin with a floor holders can always redeem, final in about a second on Avalanche. Fuji testnet, no real money.
             </p>
           </div>
         </section>
@@ -289,7 +369,10 @@ export default function Landing() {
                 <li><b>Bought by</b><span>names from the contract&apos;s own fill log</span></li>
                 <li><b>Final in 0.9 s</b><span>every trade shows how long Avalanche took</span></li>
               </ul>
-              <a href="/social" onClick={go("/(tabs)/social")} className="jl-more">Scroll the feed <Arrow /></a>
+              <div className="jl-more-row">
+                <a href="/social" onClick={go("/(tabs)/social")} className="jl-more">Scroll the feed <Arrow /></a>
+                <a href="#get-app" onClick={jump("get-app")} className="jl-more">Get the app <Arrow /></a>
+              </div>
             </div>
             <figure className="jl-phone-fig">
               <div className="jl-phone">
@@ -301,6 +384,8 @@ export default function Landing() {
             </figure>
           </div>
         </section>
+
+        <GetApp go={go} />
 
         <section className="jl-sec" id="tech" aria-labelledby="jl-tech-title">
           <div className="jl-wrap">
