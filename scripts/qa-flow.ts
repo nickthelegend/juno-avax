@@ -40,14 +40,16 @@ const key = readEnv()['JUNO_QA_KEY'] as Hex | undefined;
 if (!key) throw Error('Setup required: JUNO_QA_KEY in .env');
 const qa = privateKeyToAccount(key);
 const pub = client();
-const slug = process.env.QA_SLUG ?? `qa-${new Date().toISOString().slice(5, 16).replace(/[-T:]/g, '')}`;
+const RESUME = process.env.QA_RESUME_POST ?? null; // finish finalize + claim on a post an earlier run left at its dare
+const previous = RESUME ? JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8')).qaFlow : null;
+const slug = previous?.slug ?? process.env.QA_SLUG ?? `qa-${new Date().toISOString().slice(5, 16).replace(/[-T:]/g, '')}`;
 const say = (s: string) => process.stdout.write(`${new Date().toISOString().slice(11, 19)} ${s}\n`);
 
 type Step = { label: string; functionName: string; to: string; value: string; hash?: Hex; status?: string; block?: number; confirmMs?: number; blockMs?: number | null; gasUsed?: number; at?: string };
-const steps: Step[] = [];
+const steps: Step[] = previous?.steps ?? [];
 let reserved = 0n;
 let currentLabel = 'launch';
-let postAddress: string | null = null;
+let postAddress: string | null = RESUME;
 const record = () => {
   const data = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
   data.qaFlow = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts', account: qa.address, slug, post: postAddress, width: WIDTH, steps };
@@ -115,6 +117,21 @@ try {
       const until = async (locator: { waitFor: (o: object) => Promise<void> }, ms = 180_000) => locator.waitFor({ state: 'visible', timeout: ms });
 
       try {
+      if (RESUME) {
+        await page.goto(`http://127.0.0.1:${PORT}/coin/${RESUME}`, { waitUntil: 'networkidle' });
+        await until(button('Finalize the dare'), 60_000);
+        await button('Finalize the dare').click();
+        await until(button('Connect QA signer'), 20_000);
+        await button('Connect QA signer').click();
+        await until(page.getByText(/^Holders accepted the proof/).first(), 90_000);
+        await shot('dare-final');
+        await until(button(/^Claim .* in creator fees$/), 30_000);
+        await button(/^Claim .* in creator fees$/).click();
+        await until(page.getByText(/^Claimed /).first(), 60_000);
+        await shot('claimed');
+        await page.waitForTimeout(4000);
+        return;
+      }
       // 1. Launch a dare post from /post.
       currentLabel = 'launch_dare_post';
       await page.goto(`http://127.0.0.1:${PORT}/post?format=dare`, { waitUntil: 'networkidle' });
@@ -139,14 +156,14 @@ try {
       await until(button(/^Place sealed bid/), 30_000);
       await shot('auction-open');
       await button(/^Place sealed bid/).click();
-      await until(page.getByText(/^Your sealed bid:/), 60_000);
+      await until(page.getByText(/^Your sealed bid:/).first(), 60_000);
       await shot('bid-placed');
 
       // 3. Reveal in the second minute.
       currentLabel = 'reveal';
       await until(button('Reveal my bid'));
       await button('Reveal my bid').click();
-      await until(page.getByText(/^Revealed\./), 60_000);
+      await until(page.getByText(/^Revealed\./).first(), 60_000);
       await shot('revealed');
 
       // 4. Settle, then claim the unused escrow.
@@ -185,17 +202,17 @@ try {
       await until(button('Proof holds'), 60_000);
       currentLabel = 'vote_yes';
       await button('Proof holds').click();
-      await until(page.getByText(/^You voted yes/), 60_000);
+      await until(page.getByText(/^You voted yes/).first(), 60_000);
       await shot('voted');
       currentLabel = 'finalize_dare';
       await until(button('Finalize the dare'), 330_000);
       await button('Finalize the dare').click();
-      await until(page.getByText(/^Holders accepted the proof/), 60_000);
+      await until(page.getByText(/^Holders accepted the proof/).first(), 60_000);
       await shot('dare-final');
       currentLabel = 'claim_creator_earnings';
       await until(button(/^Claim .* in creator fees$/), 30_000);
       await button(/^Claim .* in creator fees$/).click();
-      await until(page.getByText(/^Claimed /), 60_000);
+      await until(page.getByText(/^Claimed /).first(), 60_000);
       await shot('claimed');
       await page.waitForTimeout(4000);
       } catch (error) {

@@ -43,11 +43,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web --port 5391",
-    "export:web": "EXPO_PUBLIC_QA_SIGNER=0 expo export --platform web && node scripts/web-meta.mjs && cp vercel.web.json dist/vercel.json",
+    "export:web": "EXPO_PUBLIC_QA_SIGNER=0 expo export --platform web --clear && node scripts/web-meta.mjs && cp vercel.web.json dist/vercel.json",
     "serve": "node scripts/serve.mjs",
     "build": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "export:qa": "EXPO_PUBLIC_QA_SIGNER=1 expo export --platform web --output-dir dist-qa && node scripts/web-meta.mjs dist-qa"
+    "export:qa": "EXPO_PUBLIC_QA_SIGNER=1 expo export --platform web --clear --output-dir dist-qa && node scripts/web-meta.mjs dist-qa"
   },
   "private": true
 }

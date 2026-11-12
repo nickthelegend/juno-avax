@@ -23,7 +23,7 @@ Juno is a social app where every post is a coin, built so that neither happens.
 
 It runs on the Avalanche Fuji C-Chain end to end: a JunoFactory deploys one contract per post (the ERC-20, the auction, the curve, the vault and the dare). The web app reads everything from the contracts with no server or indexer, signs with the person's own wallet (Core first), simulates every call before the wallet opens, and shows how long Avalanche took to make each transaction final — measured from broadcast to the block's own millisecond timestamp.
 
-Live on Fuji: the factory (source verified on Snowtrace), six posts, 50 seeded transactions from three test accounts, and one full flow driven through the web app (launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim).
+Live on Fuji: the factory (source verified on Snowtrace), six posts, 55 seeded transactions from three test accounts (median 0.24 s from broadcast to a final block), and one full flow driven through the web app (launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim).
 
 ## Tech stack
 
@@ -40,9 +40,10 @@ Live on Fuji: the factory (source verified on Snowtrace), six posts, 50 seeded t
 - Demo video (≤ 3 min): (to record)
 - Slides: `docs/SLIDES.md`
 - JunoFactory on Snowtrace: https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539
-- Factory deploy tx: https://testnet.snowtrace.io/tx/0x834873b8f9cdad6171057cad507e527ee8903b3c53b3f9c2cedcae4f1a5366de
-- Graduated post PILE-IN: https://testnet.snowtrace.io/address/0x494072474d27a694828F79A2B5794815a4261A87
-- Dare post ROOFTOP: https://testnet.snowtrace.io/address/0xaC07a74c9E32230f36Bd863EC740d4DE51860D39
+- Factory deploy tx: https://testnet.snowtrace.io/tx/0xdc72b603c6ab6c4f80aa2db93ad74918216b89a6e21ce6a52cc5c020db712d5c
+- Graduated post PILE-IN: https://testnet.snowtrace.io/address/0x035a2CF4714fedce1A80AC2790442B2912823b91
+- Dare post ROOFTOP (accepted): https://testnet.snowtrace.io/address/0xda23789f6D450793093Bf079c1Dc3B94D0aFce9B
+- Dare post NIGHT-SWIM (flaked, bond into the floor): https://testnet.snowtrace.io/address/0x48FCE68864116bA594Ae8C7412759F8BE86E1026
 - Every transaction: `deployments/fuji.json` and the tables in README.md
 
 ## AI tools used

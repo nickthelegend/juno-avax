@@ -26,6 +26,9 @@ if (d.qaFlow?.steps?.length) {
   lines.push('| # | Call | Tx | Final block | Receipt |', '| ---: | --- | --- | ---: | ---: |');
   q.steps.forEach((s, i) => lines.push(`| ${i + 1} | \`${s.functionName}\` | ${s.hash ? tx(s.hash) : '—'} ${s.status === 'success' ? '' : `(${s.status ?? 'not sent'})`} | ${sec(s.blockMs)} | ${sec(s.confirmMs)} |`));
   lines.push('');
+  if (d.qaAbandoned) {
+    lines.push(`An earlier QA run (post ${addr(d.qaAbandoned.post)}) stopped after its sealed bid because a test-harness locator matched two elements; that post was closed by script: ${d.qaAbandoned.steps.map((s) => `${s.label.replace(/_/g, ' ')} ${tx(s.hash)}`).join(', ')}.`, '');
+  }
 }
 
 lines.push(`### Seeded on Fuji (${d.seed.length} transactions, ${d.seed.filter((s) => s.status !== 'success').length} failed)`, '');

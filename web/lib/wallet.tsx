@@ -70,6 +70,8 @@ export type WalletState = {
 };
 
 const WalletContext = createContext<WalletState | null>(null);
+/** Refusals that only mean "not yet" and pass once the next block is stamped. */
+const TIME_WINDOWS = new Set(["RevealWindow", "SettleWindow", "DareWindow"]);
 
 const ABIS: Record<TxStep["abi"], Abi> = { post: postAbi as Abi, factory: factoryAbi as Abi };
 
@@ -171,9 +173,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           const value = step.resolveValue ? await step.resolveValue() : BigInt(step.value);
           const data = encodeStep(step);
           // Ask Fuji first: a call the contract would refuse fails here, with its reason, before the wallet opens.
-          await client.call({ account: address as Address, to: step.to, data, value }).catch((error: unknown) => {
-            throw new TxError(describeTxError(error));
-          });
+          // A time-window refusal right at a boundary is retried for a few seconds: the simulation runs
+          // against the latest block, whose timestamp trails this device's clock by up to a block.
+          for (let attempt = 0; ; attempt += 1) {
+            const failure = await client
+              .call({ account: address as Address, to: step.to, data, value })
+              .then(() => null)
+              .catch((error: unknown) => describeTxError(error));
+            if (!failure) break;
+            if (attempt < 4 && failure.reason && TIME_WINDOWS.has(failure.reason)) {
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              continue;
+            }
+            throw new TxError(failure);
+          }
           progress({ index, label: step.label, phase: "signing" });
           const hash = await sendWithWallet({ from: address as Address, to: step.to, data, value }).catch((error: unknown) => {
             throw new TxError(describeTxError(error));
