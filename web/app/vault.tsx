@@ -93,6 +93,7 @@ export default function VaultScreen() {
           </Pad>
         ) : snapshot.error || !snapshot.data ? (
           <Placeholder
+            inline
             art="warning"
             title="Could not read the vault"
             detail={snapshot.error ?? "The Fuji endpoints did not answer."}
@@ -302,6 +303,7 @@ function YourView({ data, preset, presetTo, onChanged }: { data: VaultSnapshot; 
   if (!account) {
     return (
       <Placeholder
+        inline
         art="wallet"
         title="Connect to open your bag"
         detail="Your private balances are decrypted on this device with a key only your wallet can recreate."
@@ -366,6 +368,7 @@ function YourView({ data, preset, presetTo, onChanged }: { data: VaultSnapshot; 
   if (status === "other") {
     return (
       <Placeholder
+        inline
         art="warning"
         title="This signature opens a different bag"
         detail="This account registered an eERC key that this signature does not recreate. Sign with the same wallet you first opened the bag with."
@@ -379,7 +382,7 @@ function YourView({ data, preset, presetTo, onChanged }: { data: VaultSnapshot; 
         <Card style={{ paddingVertical: 22 }}>
           <Label style={{ fontWeight: "800", fontSize: 18 }}>Create your bag on Fuji</Label>
           <Body muted style={{ marginTop: 6 }}>
-            Your browser builds a zero-knowledge proof that you own this key, bound to your account and to Fuji. One transaction, test AVAX gas only.
+            Your browser proves you own this key, bound to your account and to Fuji. One transaction, test AVAX gas only.
           </Body>
           <Button
             label={busy ?? "Create private bag"}
@@ -464,10 +467,10 @@ function YourView({ data, preset, presetTo, onChanged }: { data: VaultSnapshot; 
         />
         <Caption>
           {action === "shield"
-            ? "Moves public coins into your encrypted balance. The amount you shield is a public transfer; after that, nobody can see how your bag changes."
+            ? "Moves public coins into your encrypted balance. The amount you shield is public; what happens after is not."
             : action === "send"
-              ? "A transfer proof moves part of your bag to another private bag. Nobody but the two of you and the auditor learns the amount."
-              : "A withdraw proof turns part of your bag back into public coins you can sell or redeem. The amount becomes public."}
+              ? "Sends part of your bag to another private bag. Only the two of you and the auditor see the amount."
+              : "Turns part of your bag back into public coins to sell or redeem. The amount becomes public."}
         </Caption>
         {pickable.length === 0 ? (
           <Caption style={{ color: theme.colors.text }}>

@@ -623,8 +623,8 @@ export function Segmented<T extends string>({
 /* States                                                              */
 /* ------------------------------------------------------------------ */
 
-const PlaceholderBox = styled.View`
-  flex: 1;
+const PlaceholderBox = styled.View<{ $inline?: boolean }>`
+  flex: ${(p) => (p.$inline ? "0 0 auto" : "1")};
   align-items: center;
   justify-content: center;
   padding: ${(p) => p.theme.space(8)}px;
@@ -651,6 +651,7 @@ export function Placeholder({
   action,
   busy = false,
   art = false,
+  inline = false,
 }: {
   title: string;
   detail?: string;
@@ -662,9 +663,15 @@ export function Placeholder({
    * warning cone and never the empty slot.
    */
   art?: boolean | ObjectArt;
+  /**
+   * Inside a ScrollView below other content: size to the content instead of
+   * flexing (a flex-1 box in a scroll body has no height, so its centred
+   * content spilled up over whatever sat above it).
+   */
+  inline?: boolean;
 }) {
   return (
-    <PlaceholderBox>
+    <PlaceholderBox $inline={inline}>
       {busy ? <ActivityIndicator color={theme.colors.muted} /> : null}
       {art === true ? <BrandImage art="empty" alt="" size={148} float="bob" style={{ marginBottom: 4 }} /> : null}
       {typeof art === "string" ? <Object3D art={art} alt="" size={132} float eager style={{ marginBottom: 4 }} /> : null}

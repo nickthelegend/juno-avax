@@ -216,7 +216,7 @@ export function FloorPanel() {
         </View>
       </View>
       <Text style={s.panelDetail}>
-        Any holder can redeem against a post's floor at any time. Half of every opening auction and 20% of each buy go in. Fuji testnet.
+        Holders can redeem against a post's floor at any time. It holds half of each opening auction and 20% of every buy.
       </Text>
 
       <View style={s.split}>
@@ -500,7 +500,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       </View>
       <Text style={f.body}>
         {n.phase === "commit"
-          ? "A bid is a hash with 0.005 AVAX escrowed, the same for everyone, so nobody can read a price until the reveal. Everyone who clears pays one price."
+          ? "Bids are sealed: the same 0.005 AVAX escrow and only a hash on chain. Winners all pay one price."
           : n.phase === "reveal"
             ? "Bidders reveal amount, max price and salt. A bid that is never revealed is refunded minus 1%."
             : "Bidding and reveals are over. Anyone can settle: winners get tokens at one price, and unused escrow is claimable."}
@@ -509,7 +509,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       {n.phase === "commit" ? (
         mine && mineOnChain?.exists ? (
           <Text style={f.mine}>
-            Your sealed bid: {mine.amount} tokens at up to {amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. The salt stays in this browser until you reveal.
+            Your sealed bid: {mine.amount} tokens at up to {amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. The salt stays on this device until you reveal.
           </Text>
         ) : busy ? (
           <Text style={f.mine}>Placing your sealed bid…</Text>
