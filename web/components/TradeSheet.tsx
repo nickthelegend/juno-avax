@@ -299,6 +299,12 @@ export function TradeSheet({
                 <Mono_ style={{ color: theme.colors.pos }}>{quote ? money(quote.toFloor, "AVAX", { compact: false }) : quoting ? "…" : "—"}</Mono_>
               </Line>
             ) : null}
+            {side === "buy" && quote ? (
+              <Line>
+                <Label muted>Priced by</Label>
+                <Mono_>{quote.pricedBy === "auction" ? "Auction clearing price" : quote.pricedBy === "floor" ? "The floor" : "The curve"}</Mono_>
+              </Line>
+            ) : null}
             <Line>
               <Label muted>{side === "redeem" ? "Paid from" : "Price impact"}</Label>
               <Mono_ $warn={side !== "redeem" && (quote?.priceImpact ?? 0) > 0.05}>

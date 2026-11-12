@@ -301,6 +301,8 @@ export type SwapQuote = {
   priceImpact: number;
   /** Paid from the floor rather than the curve (the floor is higher). */
   fromFloor: boolean;
+  /** What set the price: the curve, the floor, or (for a buy) the auction's clearing price. */
+  pricedBy: "curve" | "floor" | "auction";
 };
 
 export type SwapBuild = { steps: TxStep[]; quote: SwapQuote };
@@ -568,6 +570,8 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
   if (side === "buy") {
     const gross = grossBuy(sold, q, vault, supply, BigInt(m.clearing_price));
     const total = gross + gross / 5n + gross / 100n;
+    const floorPart = supply === 0n ? 0n : (vault * q + supply - 1n) / supply;
+    const pricedBy: SwapQuote["pricedBy"] = gross === curveCost(sold, q) ? "curve" : gross === floorPart ? "floor" : "auction";
     const curveGross = curveCost(sold, q);
     const average = avax(gross) / quantity;
     return {
@@ -578,6 +582,7 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
       toFloor: avax(gross / 5n),
       priceImpact: spot > 0 ? Math.max(0, average / spot - 1) : 0,
       fromFloor: gross > curveGross,
+      pricedBy,
     };
   }
   if (side === "sell") {
@@ -593,10 +598,11 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
       toFloor: 0,
       priceImpact: spot > 0 ? Math.max(0, 1 - average / spot) : 0,
       fromFloor: gross > curveOut,
+      pricedBy: gross > curveOut ? "floor" : "curve",
     };
   }
   const out = redeemQuote(vault, supply, q);
-  return { side, amountOut: avax(out), amountIn: 0, fee: avax(out / 99n), toFloor: 0, priceImpact: 0, fromFloor: true };
+  return { side, amountOut: avax(out), amountIn: 0, fee: avax(out / 99n), toFloor: 0, priceImpact: 0, fromFloor: true, pricedBy: "floor" };
 }
 
 /* ------------------------------------------------------------------ */

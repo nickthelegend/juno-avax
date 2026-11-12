@@ -13,8 +13,9 @@ The hosted web app is deployed by the orchestrator after review; until then run 
 ```bash
 pnpm install
 cp web/.env.example web/.env.local          # public factory address only
-pnpm --filter juno-avax-web export:web      # static export in web/dist
-node web/scripts/serve.mjs 5391             # http://localhost:5391
+pnpm web:export                             # static export in web/dist
+pnpm web:serve                              # http://localhost:5391
+pnpm test                                   # forge (70) + SDK (4) + web (10)
 ```
 
 1. Open `/social` — the feed reads every post from Fuji, with prices, floors and who bought.
