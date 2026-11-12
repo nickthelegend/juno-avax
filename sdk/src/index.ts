@@ -1,139 +1,296 @@
-import { sha256 } from '@noble/hashes/sha256';
+/**
+ * @juno/sdk — Juno on Avalanche Fuji.
+ *
+ * Reads the JunoFactory and each JunoPost over plain JSON-RPC (viem), and
+ * mirrors the contracts' integer maths so a quote on screen is the number
+ * the chain will charge. Every amount is wei (AVAX has 18 decimals); post
+ * coins have 0 decimals, so a token amount is a whole number.
+ *
+ * The returned shapes keep the field names the Juno app was written against
+ * on NEAR (`Market`, `Trade`), with times in milliseconds and amounts as
+ * decimal strings, so the screens did not have to be rewritten.
+ */
+import {
+  createPublicClient,
+  defineChain,
+  encodeAbiParameters,
+  fallback,
+  http,
+  keccak256,
+  type Address,
+  type Hex,
+  type PublicClient,
+} from 'viem';
 
-export const TESTNET_RPC = 'https://test.rpc.fastnear.com';
-export const ONECLICK = 'https://1click.chaindefuser.com/v0';
-export const YOCTO = 10n ** 24n;
-export const BASE = YOCTO / 10_000n;
-const WAD = 10n ** 18n;
-const WEIGHTS = [1000000n,1200000n,1440000n,1728000n,2073600n,2488320n,2985984n,3583181n,4299817n,5159780n,6191736n,7430084n,8916100n,10699321n,12839185n,15407022n];
-const WEIGHT_SUM = 87442130n;
-export type Market = {
-  slug: string; creator: string; caption: string; media_url: string;
-  phase: 'commit'|'reveal'|'settle'|'curve'|'graduated';
-  commit_end_ms: number; reveal_end_ms: number; sealed_bid_count: number; revealed_bid_count: number;
-  clearing_price: string; total_supply: string; curve_sold: string; floor_vault: string;
-  floor_per_token: string; curve_reserve: string; graduation_escrow: string;
-  creator_earnings: string; graduated: boolean; dare: string; dare_bond: string; proof: string; dare_finalized: boolean;
-};
+import { factoryAbi, postAbi } from './abi';
 
-function sqrt(x: bigint): bigint {
-  if (x < 2n) return x;
-  let r = 1n << BigInt((x.toString(2).length + 1) >> 1);
-  while (true) { const next = (r + x / r) / 2n; if (next >= r) return r; r = next; }
-}
-function table(): {prices: bigint[]; sizes: bigint[]} {
-  let root = 100n * WAD;
-  for (let i=0;i<4;i++) root=sqrt(root*WAD);
-  const prices=[BASE];
-  for(let i=1;i<=16;i++) { const p=prices[i-1], rem=root%WAD; prices.push(p*(root/WAD)+(p/WAD)*rem+(p%WAD)*rem/WAD); }
-  const sizes:bigint[]=[];
-  let used=0n;
-  for(let i=0;i<15;i++){const size=800n*WEIGHTS[i]/WEIGHT_SUM;sizes.push(size);used+=size;}
-  sizes.push(800n-used);
-  return {prices,sizes};
-}
+export { factoryAbi, postAbi };
+
+export const FUJI_CHAIN_ID = 43113;
+export const FUJI_RPC = 'https://api.avax-test.network/ext/bc/C/rpc';
+export const FUJI_EXPLORER = 'https://testnet.snowtrace.io';
+
+export const fuji = defineChain({
+  id: FUJI_CHAIN_ID,
+  name: 'Avalanche Fuji',
+  nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+  rpcUrls: { default: { http: [FUJI_RPC] } },
+  blockExplorers: { default: { name: 'Snowtrace', url: FUJI_EXPLORER } },
+  contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
+  testnet: true,
+});
+
+export const WEI = 10n ** 18n;
+export const BASE = 10n ** 12n;
+export const BID_ESCROW = 5n * 10n ** 15n; // 0.005 AVAX
+export const AUCTION_UNITS = 200n;
+export const CURVE_UNITS = 800n;
+
+/* ------------------------------------------------------------------ */
+/* Curve maths (mirrors contracts/src/CurveMath.sol)                   */
+/* ------------------------------------------------------------------ */
+
+const PRICES = [
+  1000000000000n, 1333521432163n, 1778279410038n, 2371373705660n, 3162277660166n, 4216965034282n,
+  5623413251898n, 7498942093317n, 9999999999989n, 13335214321618n, 17782794100368n, 23713737056588n,
+  31622776601645n, 42169650342806n, 56234132518965n, 74989420933152n, 99999999999875n,
+];
+const SIZES = [9n, 10n, 13n, 15n, 18n, 22n, 27n, 32n, 39n, 47n, 56n, 67n, 81n, 97n, 117n, 150n];
+
 export function curveCost(sold: bigint, quantity: bigint, roundUp = true): bigint {
-  if (quantity <= 0n || sold < 0n || sold + quantity > 800n) throw Error('ERR_QUANTITY');
-  const {prices,sizes}=table();
-  const from=sold, to=sold+quantity;
-  let start=0n, total=0n;
-  for(let k=0;k<16;k++){
-    if(start>=to)break;
-    const end=start+sizes[k];
-    if(end>from && sizes[k]>0n){
-      const lo=from>start?from:start, hi=to<end?to:end;
-      const x=hi-lo, a=lo-start;
-      const numerator=(prices[k+1]-prices[k])*x*(2n*a+x);
-      const denominator=2n*sizes[k];
-      total+=x*prices[k]+(roundUp?(numerator+denominator-1n)/denominator:numerator/denominator);
+  if (quantity <= 0n || sold < 0n || sold + quantity > CURVE_UNITS) throw Error('Quantity');
+  const from = sold;
+  const to = sold + quantity;
+  let start = 0n;
+  let total = 0n;
+  for (let k = 0; k < 16; k++) {
+    if (start >= to) break;
+    const end = start + SIZES[k]!;
+    if (end > from) {
+      const lo = from > start ? from : start;
+      const hi = to < end ? to : end;
+      const x = hi - lo;
+      const a = lo - start;
+      const numerator = (PRICES[k + 1]! - PRICES[k]!) * x * (2n * a + x);
+      const denominator = 2n * SIZES[k]!;
+      total += x * PRICES[k]! + (roundUp ? (numerator + denominator - 1n) / denominator : numerator / denominator);
     }
-    start=end;
+    start = end;
   }
   return total;
 }
-export function buyQuote(sold: bigint, quantity: bigint, vault = 0n, supply = 0n): bigint {
+
+/** Price of the next whole token on the curve, in wei. */
+export function spotPrice(sold: bigint): bigint {
+  return sold >= CURVE_UNITS ? curveCost(CURVE_UNITS - 1n, 1n) : curveCost(sold, 1n);
+}
+
+/** Gross of a buy: the curve price, or the pro-rata floor if that is higher. */
+export function grossBuy(sold: bigint, quantity: bigint, vault: bigint, supply: bigint): bigint {
   const curve = curveCost(sold, quantity);
   const floor = supply === 0n ? 0n : (vault * quantity + supply - 1n) / supply;
-  const gross = curve > floor ? curve : floor;
+  return curve > floor ? curve : floor;
+}
+
+/** Everything a buy costs: gross + 20% into the floor + 1% fee. */
+export function buyQuote(sold: bigint, quantity: bigint, vault = 0n, supply = 0n): bigint {
+  const gross = grossBuy(sold, quantity, vault, supply);
   return gross + gross / 5n + gross / 100n;
 }
-export function floorPerToken(vault: bigint, supply: bigint): bigint {
-  return supply === 0n ? 0n : vault / supply;
-}
-export function formatNear(yocto: bigint, precision = 4): string {
-  const sign = yocto < 0n ? '-' : '';
-  const a = yocto < 0n ? -yocto : yocto;
-  const scale = 10n ** BigInt(precision);
-  const fraction = (a % YOCTO) * scale / YOCTO;
-  return `${sign}${a / YOCTO}.${fraction.toString().padStart(precision, '0')}`;
-}
-export function commitment(owner: string, amount: bigint, maxPrice: bigint, salt: string): Uint8Array {
-  return sha256(new TextEncoder().encode(`juno:v1:${owner}:${amount}:${maxPrice}:${salt}`));
-}
-export function base64(bytes: Uint8Array): string {
-  const B = (globalThis as {Buffer?: {from(b: Uint8Array): {toString(e: string): string}}}).Buffer;
-  if (B) return B.from(bytes).toString('base64');
-  return btoa(String.fromCharCode(...bytes));
-}
-async function rpc(body: object, endpoint = TESTNET_RPC): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const response = await fetch(endpoint, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({jsonrpc:'2.0', id:'juno', ...body}), signal: controller.signal });
-    if (!response.ok) throw Error(`RPC HTTP ${response.status}`);
-    const data = await response.json();
-    if (data.error) {
-      // NEAR puts UNKNOWN_ACCOUNT and contract panics behind the generic "Server error".
-      const detail = typeof data.error.data === 'string' ? data.error.data : JSON.stringify(data.error.data ?? {});
-      throw Error([data.error.cause?.name, data.error.message, detail].filter(Boolean).join(': '));
-    }
-    return data.result;
-  } catch (error) {
-    if (controller.signal.aborted) throw Error('NEAR testnet RPC timed out');
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-export async function view<T>(account: string, method: string, args: object = {}, endpoint = TESTNET_RPC): Promise<T> {
-  const result = await rpc({method:'query', params:{request_type:'call_function', finality:'final', account_id:account, method_name:method, args_base64:base64(new TextEncoder().encode(JSON.stringify(args)))}}, endpoint);
-  return JSON.parse(new TextDecoder().decode(Uint8Array.from(result.result)));
-}
-export type Trade = { ms: number; kind: 'auction'|'buy'|'sell'|'redeem'; account: string; quantity: string; total: string; sold_after: string };
-export const trades = (account: string, endpoint?: string) => view<Trade[]>(account, 'trades', {}, endpoint);
-export const holders = (account: string, endpoint?: string) => view<Array<[string, string]>>(account, 'holders', {}, endpoint);
-export const balanceOf = (token: string, accountId: string, endpoint?: string) => view<string>(token, 'ft_balance_of', {account_id: accountId}, endpoint);
-export const quoteBuy = (token: string, quantity: bigint, endpoint?: string) => view<string>(token, 'quote_buy', {quantity: quantity.toString()}, endpoint).then(BigInt);
-/** Marginal price of the next whole token on the curve, in yocto. */
-export function spotPrice(sold: bigint): bigint { return sold >= 800n ? curveCost(799n, 1n) : curveCost(sold, 1n); }
-/** What a sell of `quantity` pays out after the 1% fee, mirroring the contract (curve or floor, whichever is higher). */
+
+/** What a sell pays after the 1% fee (curve or floor, whichever is higher). */
 export function sellQuote(sold: bigint, quantity: bigint, vault: bigint, supply: bigint): bigint {
-  if (quantity <= 0n || quantity > sold || supply === 0n) throw Error('ERR_SELL');
+  if (quantity <= 0n || quantity > sold || supply === 0n) throw Error('SellTooLarge');
   const gross = curveCost(sold - quantity, quantity, false);
-  const floorGross = vault * quantity / supply;
+  const floorGross = (vault * quantity) / supply;
   const actual = gross < floorGross ? floorGross : gross;
   return actual - actual / 100n;
 }
-/** What redeeming `quantity` against the floor pays (1% stays for remaining holders). */
+
+/** What redeeming `quantity` against the floor pays (1% stays for the remaining holders). */
 export function redeemQuote(vault: bigint, supply: bigint, quantity: bigint): bigint {
-  if (quantity <= 0n || supply === 0n) return 0n;
-  const proRata = vault * quantity / supply;
+  if (quantity <= 0n || supply === 0n || quantity > supply) return 0n;
+  const proRata = (vault * quantity) / supply;
   return proRata - proRata / 100n;
 }
-export async function accountBalance(accountId: string, endpoint = TESTNET_RPC): Promise<bigint> {
-  const result = await rpc({method:'query', params:{request_type:'view_account', finality:'final', account_id:accountId}}, endpoint);
-  return BigInt(result.amount);
+
+export function floorPerToken(vault: bigint, supply: bigint): bigint {
+  return supply === 0n ? 0n : vault / supply;
 }
-export const posts = (factory: string, endpoint?: string) => view<string[]>(factory, 'posts', {}, endpoint);
-export const market = (account: string, endpoint?: string) => view<Market>(account, 'market', {}, endpoint);
-export async function oneClickTokens(): Promise<Array<{assetId:string;symbol:string;blockchain:string;decimals:number}>> {
-  const response = await fetch(`${ONECLICK}/tokens`);
-  if (!response.ok) throw Error(`1Click HTTP ${response.status}`);
-  return response.json();
+
+/** wei → "1.2345" (fixed decimals, no rounding up). */
+export function formatAvax(wei: bigint, precision = 6): string {
+  const sign = wei < 0n ? '-' : '';
+  const a = wei < 0n ? -wei : wei;
+  const scale = 10n ** BigInt(precision);
+  const fraction = ((a % WEI) * scale) / WEI;
+  return `${sign}${a / WEI}.${fraction.toString().padStart(precision, '0')}`;
 }
-export async function dryQuote(input: {originAsset:string; destinationAsset:string; amount:string; recipient:string; refundTo:string; recipientType?:'DESTINATION_CHAIN'|'INTENTS'; refundType?:'ORIGIN_CHAIN'|'INTENTS'; swapType?:'EXACT_INPUT'|'EXACT_OUTPUT'}, jwt?:string): Promise<unknown> {
-  const response = await fetch(`${ONECLICK}/quote`, {method:'POST', headers:{'Content-Type':'application/json', ...(jwt ? {Authorization:`Bearer ${jwt}`} : {})}, body:JSON.stringify({dry:true, swapType:input.swapType ?? 'EXACT_INPUT', slippageTolerance:100, depositType:'ORIGIN_CHAIN', originAsset:input.originAsset, destinationAsset:input.destinationAsset, amount:input.amount, recipient:input.recipient, recipientType:input.recipientType ?? 'DESTINATION_CHAIN', refundTo:input.refundTo, refundType:input.refundType ?? 'ORIGIN_CHAIN', deadline:new Date(Date.now()+180_000).toISOString()})});
-  const data = await response.json();
-  if (!response.ok) throw Error(`1Click quote ${response.status}: ${JSON.stringify(data)}`);
-  return data;
+
+export function parseAvax(value: string): bigint {
+  const clean = value.trim();
+  if (!/^\d*(\.\d*)?$/.test(clean) || clean === '' || clean === '.') throw Error('Not an AVAX amount');
+  const [whole = '0', frac = ''] = clean.split('.');
+  return BigInt(whole || '0') * WEI + BigInt((frac + '0'.repeat(18)).slice(0, 18));
+}
+
+/* ------------------------------------------------------------------ */
+/* Sealed bids                                                         */
+/* ------------------------------------------------------------------ */
+
+/** The commitment JunoPost.commitmentOf computes: bound to the post, the chain and the bidder. */
+export function commitment(post: Address, chainId: number, bidder: Address, amount: bigint, maxPrice: bigint, salt: Hex): Hex {
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: 'string' }, { type: 'address' }, { type: 'uint256' }, { type: 'address' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'bytes32' }],
+      ['juno:v1', post, BigInt(chainId), bidder, amount, maxPrice, salt],
+    ),
+  );
+}
+
+export function randomSalt(): Hex {
+  const bytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(bytes);
+  return `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}` as Hex;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reads                                                               */
+/* ------------------------------------------------------------------ */
+
+export type Phase = 'commit' | 'reveal' | 'settle' | 'curve' | 'graduated';
+const PHASES: Phase[] = ['commit', 'reveal', 'settle', 'curve', 'graduated'];
+const KINDS = ['auction', 'buy', 'sell', 'redeem'] as const;
+
+export type Market = {
+  slug: string;
+  creator: string;
+  caption: string;
+  media_url: string;
+  phase: Phase;
+  opened_ms: number;
+  commit_end_ms: number;
+  reveal_end_ms: number;
+  dare_end_ms: number;
+  sealed_bid_count: number;
+  revealed_bid_count: number;
+  clearing_price: string;
+  total_supply: string;
+  curve_sold: string;
+  floor_vault: string;
+  floor_per_token: string;
+  curve_reserve: string;
+  graduation_escrow: string;
+  creator_earnings: string;
+  spot_price: string;
+  graduated: boolean;
+  dare: string;
+  dare_bond: string;
+  proof: string;
+  dare_finalized: boolean;
+  dare_accepted: boolean;
+  votes_yes: string;
+  votes_no: string;
+  trade_count: number;
+};
+
+export type Trade = { ms: number; kind: (typeof KINDS)[number]; account: string; quantity: string; total: string; sold_after: string };
+
+export type BidView = {
+  exists: boolean;
+  revealed: boolean;
+  amount: number;
+  allocated: number;
+  maxPrice: bigint;
+  commitment: Hex;
+  refund: bigint;
+};
+
+export function client(rpcs: string[] = [FUJI_RPC]): PublicClient {
+  return createPublicClient({
+    chain: fuji,
+    transport: fallback(rpcs.map((url) => http(url, { batch: { wait: 16 }, timeout: 12_000, retryCount: 2 }))),
+    pollingInterval: 250,
+  }) as PublicClient;
+}
+
+export async function posts(c: PublicClient, factory: Address): Promise<Address[]> {
+  return [...(await c.readContract({ address: factory, abi: factoryAbi, functionName: 'posts' }))];
+}
+
+export async function market(c: PublicClient, post: Address): Promise<Market> {
+  const v = await c.readContract({ address: post, abi: postAbi, functionName: 'market' });
+  return {
+    slug: v.slug,
+    creator: v.creator,
+    caption: v.caption,
+    media_url: v.mediaUrl,
+    phase: PHASES[v.phase] ?? 'curve',
+    opened_ms: Number(v.openedAt) * 1000,
+    commit_end_ms: Number(v.commitEnd) * 1000,
+    reveal_end_ms: Number(v.revealEnd) * 1000,
+    dare_end_ms: Number(v.dareEnd) * 1000,
+    sealed_bid_count: Number(v.sealedBids),
+    revealed_bid_count: Number(v.revealedBids),
+    clearing_price: v.clearingPrice.toString(),
+    total_supply: v.totalSupply.toString(),
+    curve_sold: v.curveSold.toString(),
+    floor_vault: v.floorVault.toString(),
+    floor_per_token: v.floorPerToken.toString(),
+    curve_reserve: v.curveReserve.toString(),
+    graduation_escrow: v.graduationEscrow.toString(),
+    creator_earnings: v.creatorEarnings.toString(),
+    spot_price: v.spotPrice.toString(),
+    graduated: v.graduated,
+    dare: v.dare,
+    dare_bond: v.dareBond.toString(),
+    proof: v.proof,
+    dare_finalized: v.dareFinalized,
+    dare_accepted: v.dareAccepted,
+    votes_yes: v.votesYes.toString(),
+    votes_no: v.votesNo.toString(),
+    trade_count: Number(v.tradeCount),
+  };
+}
+
+export async function trades(c: PublicClient, post: Address): Promise<Trade[]> {
+  const list = await c.readContract({ address: post, abi: postAbi, functionName: 'trades' });
+  return list.map((t) => ({
+    ms: Number(t.time) * 1000,
+    kind: KINDS[t.kind] ?? 'buy',
+    account: t.account,
+    quantity: String(t.quantity),
+    total: t.total.toString(),
+    sold_after: String(t.soldAfter),
+  }));
+}
+
+/** Holders, largest first. */
+export async function holders(c: PublicClient, post: Address): Promise<Array<[string, string]>> {
+  const [accounts, balances] = await c.readContract({ address: post, abi: postAbi, functionName: 'holders' });
+  return accounts
+    .map((a, i) => [a, balances[i]!.toString()] as [string, string])
+    .sort((x, y) => (BigInt(y[1]) > BigInt(x[1]) ? 1 : BigInt(y[1]) < BigInt(x[1]) ? -1 : 0));
+}
+
+export async function balanceOf(c: PublicClient, post: Address, account: Address): Promise<bigint> {
+  return c.readContract({ address: post, abi: postAbi, functionName: 'balanceOf', args: [account] });
+}
+
+export async function quoteBuy(c: PublicClient, post: Address, quantity: bigint): Promise<bigint> {
+  const [total] = await c.readContract({ address: post, abi: postAbi, functionName: 'quoteBuy', args: [quantity] });
+  return total;
+}
+
+export async function bidOf(c: PublicClient, post: Address, bidder: Address): Promise<BidView> {
+  const [exists, b] = await c.readContract({ address: post, abi: postAbi, functionName: 'bidOf', args: [bidder] });
+  return { exists, revealed: b.revealed, amount: Number(b.amount), allocated: Number(b.allocated), maxPrice: b.maxPrice, commitment: b.commitment, refund: b.refund };
+}
+
+export async function voteOf(c: PublicClient, post: Address, voter: Address): Promise<0 | 1 | 2> {
+  return (await c.readContract({ address: post, abi: postAbi, functionName: 'voteOf', args: [voter] })) as 0 | 1 | 2;
+}
+
+export async function accountBalance(c: PublicClient, account: Address): Promise<bigint> {
+  return c.getBalance({ address: account });
 }
