@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:
 // keep out/.vercel (the project link), rebuild everything else
 if (existsSync('out')) for (const f of readdirSync('out')) if (f !== '.vercel') rmSync(`out/${f}`, { recursive: true, force: true });
 mkdirSync('out/api', { recursive: true });
-for (const name of ['gas', 'health']) {
+for (const name of ['gas', 'ask', 'health']) {
   await build({
     entryPoints: [`functions/${name}.ts`], outfile: `out/api/${name}.js`, bundle: true, platform: 'node', target: 'node20', format: 'cjs',
     footer: { js: 'module.exports = module.exports.default;' }, legalComments: 'none', logLevel: 'warning',
@@ -13,4 +13,4 @@ for (const name of ['gas', 'health']) {
 writeFileSync('out/package.json', JSON.stringify({ name: 'juno-avax-api', private: true, license: 'MIT' }, null, 2));
 writeFileSync('out/vercel.json', JSON.stringify({ functions: { 'api/*.js': { maxDuration: 60 } } }, null, 2));
 writeFileSync('out/index.html', '<!doctype html><meta charset="utf-8"><title>Juno API</title><p>Juno API: <a href="/api/health">/api/health</a>. Juno on Avalanche Fuji.</p>');
-console.log('built out/api: gas, health');
+console.log('built out/api: gas, ask, health');
