@@ -19,6 +19,8 @@ const { withChromeLock } = await import('/Volumes/Extreme SSD/Projects/grokbot/o
 const OUT = process.env.SHOTS_DIR ?? '/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/v2';
 const DIST = join(root, 'web/dist');
 const PORT = 5393;
+// SHOTS_BASE=https://juno-avax.vercel.app shoots the hosted site instead of serving web/dist.
+const BASE = (process.env.SHOTS_BASE ?? `http://127.0.0.1:${PORT}`).replace(/\/$/, '');
 const d = JSON.parse(readFileSync(join(root, 'deployments/fuji.json'), 'utf8'));
 
 const routes = [
@@ -42,13 +44,14 @@ const routes = [
 ];
 
 const types = { '.wasm': 'application/wasm', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon', '.ttf': 'font/ttf' };
-const server = createServer((req, res) => {
+const server = process.env.SHOTS_BASE ? null : createServer((req, res) => {
   const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0])).replace(/^(\.\.[/\\])+/, '');
   let file = join(DIST, path);
   if (!file.startsWith(DIST) || !existsSync(file) || statSync(file).isDirectory()) file = join(DIST, 'index.html');
   res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
   createReadStream(file).pipe(res);
-}).listen(PORT, '127.0.0.1');
+});
+server?.listen(PORT, '127.0.0.1');
 
 await mkdir(OUT, { recursive: true });
 let failed = false;
@@ -62,7 +65,7 @@ try {
           const errors = [];
           page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));
           page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text().slice(0, 200)}`); });
-          await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: 'networkidle' }).catch((e) => errors.push(String(e)));
+          await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' }).catch((e) => errors.push(String(e)));
           await page.waitForTimeout(Number(process.env.SHOT_WAIT_MS ?? 7000));
           const check = await page.evaluate(() => ({
             text: (document.getElementById('root')?.innerText ?? document.body.innerText ?? '').trim().length,
@@ -81,6 +84,6 @@ try {
     }
   });
 } finally {
-  server.close();
+  server?.close();
 }
 process.exit(failed ? 1 : 0);
