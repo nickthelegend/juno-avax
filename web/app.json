@@ -34,7 +34,10 @@
           "photosPermission": "Juno uses your photos and videos so you can launch them as a post or a reel."
         }
       ],
-      "./plugins/withQuotedBundleScript"
+      "./plugins/withQuotedBundleScript",
+      "expo-image",
+      "expo-status-bar",
+      "expo-secure-store"
     ],
     "scheme": "junoavax",
     "backgroundColor": "#D3E3CB",

@@ -16,7 +16,7 @@ import {
   View,
   useWindowDimensions,
   type GestureResponderEvent,
-  type ViewToken,
+  type ListViewToken as ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";

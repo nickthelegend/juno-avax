@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  type ScrollViewInstance,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -71,7 +72,7 @@ export default function PostScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const [log, setLog] = useState<LogEntry[]>([]);
   const note = (entry: Omit<LogEntry, "at">) => setLog((current) => [...current, { ...entry, at: new Date() }]);
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
   const TAB_H = useTabBarHeight().height;
   useEffect(() => {
     if (log.length > 0) setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 60);

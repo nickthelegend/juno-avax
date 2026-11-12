@@ -11,6 +11,7 @@
     "deploy": "node build.mjs && cd out && vercel deploy --prod --yes --name juno-avax-api"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@juno/sdk": "workspace:*",
     "viem": "2.57.13"
   },
