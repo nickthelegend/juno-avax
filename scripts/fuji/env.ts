@@ -11,7 +11,7 @@ import type { Hex } from 'viem';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const ENV = join(ROOT, '.env');
-export const ROLES = ['JUNO_DEPLOYER_KEY', 'JUNO_MIRA_KEY', 'JUNO_KAI_KEY', 'JUNO_OTO_KEY', 'JUNO_QA_KEY'] as const;
+export const ROLES = ['JUNO_DEPLOYER_KEY', 'JUNO_MIRA_KEY', 'JUNO_KAI_KEY', 'JUNO_OTO_KEY', 'JUNO_QA_KEY', 'JUNO_AUDITOR_KEY'] as const;
 export type Role = (typeof ROLES)[number];
 
 export function readEnv(file = ENV): Record<string, string> {

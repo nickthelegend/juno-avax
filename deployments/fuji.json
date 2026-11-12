@@ -11,7 +11,8 @@
     "kai": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
     "oto": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
     "qa": "0xB490723D988BD713374D9c6Efd875614B89770fe",
-    "note": "Test accounts generated for this repo; keys live only in the gitignored .env."
+    "note": "Test accounts generated for this repo; keys live only in the gitignored .env.",
+    "auditor": "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8"
   },
   "v1": {
     "factory": {
@@ -2096,5 +2097,338 @@
         "at": "2026-11-12T09:52:57.946Z"
       }
     ]
+  },
+  "eerc": {
+    "vault": {
+      "encryptedERC": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+      "registrar": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+      "babyJubJub": "0xbac19231588a71ede20f820917593bcf180ab416",
+      "verifiers": {
+        "registration": "0xb1a21983062d4d613924c8d0dc21332858c7c94e",
+        "mint": "0x4a129268ccd6a9c69f3452b39b08e7a76df688ae",
+        "withdraw": "0x567a6c6638d2ad7f80db688900a1d983e2d4b17e",
+        "transfer": "0xc6749bfdf4ad3058ec8e7013e364cad80b366fda",
+        "burn": "0x1ae83ae1fd91c091fc4bbddcfff0f17069937635"
+      }
+    },
+    "source": "https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1",
+    "mode": "converter",
+    "decimals": 0,
+    "owner": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+    "auditor": "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8",
+    "deployedAt": "2026-11-12T10:50:09.743Z",
+    "snowtrace": "https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+    "startBlock": 60942541,
+    "transactions": [
+      {
+        "label": "deploy RegistrationVerifier",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0xf2715deca40ff6af49e6e703344ca7e2eed7e2469e2089754a25aa9d97fb4c74",
+        "status": "success",
+        "block": 60942526,
+        "gasUsed": 425936,
+        "ms": 3382,
+        "at": "2026-11-12T10:49:44.484Z"
+      },
+      {
+        "label": "deploy MintVerifier",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0x1ba369897f59dc110bbd457f1ac4c41edda48de9ceea056c23a5c9b40b3f213e",
+        "status": "success",
+        "block": 60942528,
+        "gasUsed": 813961,
+        "ms": 2642,
+        "at": "2026-11-12T10:49:47.128Z"
+      },
+      {
+        "label": "deploy WithdrawVerifier",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0xc0fde28c515d15c2ca10c2ef6c39ef0c0fe110b0f29438c980ffd29c1d20f30a",
+        "status": "success",
+        "block": 60942529,
+        "gasUsed": 649853,
+        "ms": 3371,
+        "at": "2026-11-12T10:49:50.500Z"
+      },
+      {
+        "label": "deploy TransferVerifier",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0xc38b612bdf021ab98cab939089b3fe54744523248c774c0d67c5b70ef8e30fba",
+        "status": "success",
+        "block": 60942531,
+        "gasUsed": 978066,
+        "ms": 3740,
+        "at": "2026-11-12T10:49:54.241Z"
+      },
+      {
+        "label": "deploy BurnVerifier",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0xcc8f6bd1004088ac9e4be9a167de414000d41863fe70e4560b1e108acd734468",
+        "status": "success",
+        "block": 60942534,
+        "gasUsed": 711621,
+        "ms": 3799,
+        "at": "2026-11-12T10:49:58.041Z"
+      },
+      {
+        "label": "deploy BabyJubJub",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0xfcf4340db346fb303b9965289eb053fc90680678860cc3402e598685591709a8",
+        "status": "success",
+        "block": 60942535,
+        "gasUsed": 435950,
+        "ms": 2647,
+        "at": "2026-11-12T10:50:00.689Z"
+      },
+      {
+        "label": "deploy Registrar",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0x1deab41e6c5e8500366dc1a86791b2a7371abb3c33a7e765aa3740f5d706d416",
+        "status": "success",
+        "block": 60942537,
+        "gasUsed": 454935,
+        "ms": 4964,
+        "at": "2026-11-12T10:50:05.654Z"
+      },
+      {
+        "label": "deploy EncryptedERC",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": null,
+        "hash": "0x5e2467c82e8dcb70e2bc4416f62b7a4a10f6cab363777fb6ca15ede4a6c8a894",
+        "status": "success",
+        "block": 60942541,
+        "gasUsed": 4393214,
+        "ms": 4085,
+        "at": "2026-11-12T10:50:09.743Z"
+      },
+      {
+        "label": "auditor registers",
+        "from": "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8",
+        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+        "hash": "0xd9b8a6a6bda078b6fe09c8df2bc16eb2678d37907ca7b78132d7e2e49a875e9d",
+        "status": "success",
+        "block": 60942545,
+        "gasUsed": 319554,
+        "ms": 3747,
+        "at": "2026-11-12T10:50:14.278Z"
+      },
+      {
+        "label": "owner sets auditor",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0xca0326dc628e859e5c6f4c0ba859777787c583c61b4435b93a733eb469ef7537",
+        "status": "success",
+        "block": 60942549,
+        "gasUsed": 103905,
+        "ms": 3717,
+        "at": "2026-11-12T10:50:18.357Z"
+      },
+      {
+        "label": "mira registers",
+        "from": "0xB9F0CdB519F419E26B19A92fFab080f974390037",
+        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+        "hash": "0xe50940355d4249a296556379ba0c3051128a0ad8e75175d9f68d7ef3aa3b9a5c",
+        "status": "success",
+        "block": 60942552,
+        "gasUsed": 319542,
+        "ms": 4886,
+        "at": "2026-11-12T10:50:23.749Z"
+      },
+      {
+        "label": "kai registers",
+        "from": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
+        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+        "hash": "0x7575a9e3aec3995d81fc7a25853722b380cca79657a538920faefb7089ddb841",
+        "status": "success",
+        "block": 60942558,
+        "gasUsed": 319542,
+        "ms": 3746,
+        "at": "2026-11-12T10:50:27.971Z"
+      },
+      {
+        "label": "oto registers",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+        "hash": "0x144d62683fad9778805f5c6a89b4d370ca9a604d3d792c9462f6810189223de5",
+        "status": "success",
+        "block": 60942562,
+        "gasUsed": 319542,
+        "ms": 3737,
+        "at": "2026-11-12T10:50:32.228Z"
+      },
+      {
+        "label": "kai shields 600 PILE-IN approve",
+        "from": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
+        "to": "0x035a2CF4714fedce1A80AC2790442B2912823b91",
+        "hash": "0x75e240964dd93e96109589a664fcf5aa45b9d1e28a678370c021e241809dbdc0",
+        "status": "success",
+        "block": 60942566,
+        "gasUsed": 45936,
+        "ms": 2951,
+        "at": "2026-11-12T10:50:35.535Z"
+      },
+      {
+        "label": "kai shields 600 PILE-IN",
+        "from": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0xa38cda41582c70846a8c1d443d0eb80811de6508f228793da39cef7fbff46e76",
+        "status": "success",
+        "block": 60942569,
+        "gasUsed": 653549,
+        "ms": 2984,
+        "at": "2026-11-12T10:50:38.729Z"
+      },
+      {
+        "label": "kai sends PILE-IN to oto privately",
+        "from": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0xbd167cc59c65aff309d69915f27e4a1f869baca49d0198d6774cf39106db4896",
+        "status": "success",
+        "block": 60942573,
+        "gasUsed": 1124165,
+        "ms": 3935,
+        "at": "2026-11-12T10:50:44.718Z"
+      },
+      {
+        "label": "oto unshields 50 PILE-IN",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x1b3c1d08018ea946b4a4203c1fb082df4ba7db6bf25f96dcbff9a248644bbe9e",
+        "status": "success",
+        "block": 60942574,
+        "gasUsed": 774576,
+        "ms": 2649,
+        "at": "2026-11-12T10:50:48.615Z"
+      },
+      {
+        "label": "oto redeems 10 unshielded PILE-IN",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0x035a2CF4714fedce1A80AC2790442B2912823b91",
+        "hash": "0x8da09217371ef10e90b597e8e6259f784a540d4fcfb41c00085659389961f02f",
+        "status": "success",
+        "block": 60942575,
+        "gasUsed": 112242,
+        "ms": 64293,
+        "at": "2026-11-12T10:51:53.272Z"
+      },
+      {
+        "label": "oto shields 60 SPROUT approve",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0x6F8135Afc46Cd603e19c74f4486D93A824D531e1",
+        "hash": "0x2220253bf981e306ce43b086130e7519a61b2f2ddf39a14795f92ae648907e0b",
+        "status": "success",
+        "block": 60942607,
+        "gasUsed": 45924,
+        "ms": 2607,
+        "at": "2026-11-12T10:51:56.233Z"
+      },
+      {
+        "label": "oto shields 60 SPROUT",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x33aa4c860bace8339c5c43b0acf7b4c214650fa9941acf98810743e200a930ab",
+        "status": "success",
+        "block": 60942610,
+        "gasUsed": 617805,
+        "ms": 2625,
+        "at": "2026-11-12T10:51:59.081Z"
+      },
+      {
+        "label": "oto sends SPROUT to mira privately",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x3a8bcba9443fab695be9dc737eb353b4801f6a9aaa9ed69927c268e13875418d",
+        "status": "success",
+        "block": 60942614,
+        "gasUsed": 1124189,
+        "ms": 4553,
+        "at": "2026-11-12T10:52:05.750Z"
+      },
+      {
+        "label": "mira unshields 10 SPROUT",
+        "from": "0xB9F0CdB519F419E26B19A92fFab080f974390037",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x84885bf785d5da8077d4890e7614e4b56b2940697e0578194c82c486c699212d",
+        "status": "success",
+        "block": 60942619,
+        "gasUsed": 760745,
+        "ms": 4527,
+        "at": "2026-11-12T10:52:11.507Z"
+      },
+      {
+        "label": "mira sells 5 unshielded SPROUT",
+        "from": "0xB9F0CdB519F419E26B19A92fFab080f974390037",
+        "to": "0x6F8135Afc46Cd603e19c74f4486D93A824D531e1",
+        "hash": "0x730fc8ee44794003fe48a77153565ea9a12a6b5653d9bb67ad8e7b1a71534e09",
+        "status": "success",
+        "block": 60942625,
+        "gasUsed": 136080,
+        "ms": 64580,
+        "at": "2026-11-12T10:53:16.271Z"
+      },
+      {
+        "label": "mira shields 30 BALLOONS approve",
+        "from": "0xB9F0CdB519F419E26B19A92fFab080f974390037",
+        "to": "0x48604BA5590180a2386297F8E45B3Edde7C804D4",
+        "hash": "0x6ea3a2fc0ed8bee765d4485c8b4f24e169ddcc94fd4b066b7502da15933be090",
+        "status": "success",
+        "block": 60942672,
+        "gasUsed": 45924,
+        "ms": 62451,
+        "at": "2026-11-12T10:54:19.075Z"
+      },
+      {
+        "label": "mira shields 30 BALLOONS",
+        "from": "0xB9F0CdB519F419E26B19A92fFab080f974390037",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x152721dba1256719b26b94305ed8e19a63980cbe6ef314198e888b99d70d7b1f",
+        "status": "success",
+        "block": 60942707,
+        "gasUsed": 613162,
+        "ms": 2636,
+        "at": "2026-11-12T10:54:21.922Z"
+      },
+      {
+        "label": "oto shields 40 GLOW-UP approve",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0x628dD88892F45d416AAdC0185407f726A0929e9b",
+        "hash": "0x68ff19b1c7b8ec08973ec31bde383537188794194919cb1daab923c498e45537",
+        "status": "success",
+        "block": 60942711,
+        "gasUsed": 45924,
+        "ms": 3751,
+        "at": "2026-11-12T10:54:26.041Z"
+      },
+      {
+        "label": "oto shields 40 GLOW-UP",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+        "hash": "0x5781d168d2a98ca6d78c56efc80a91d2cf905539a992ac29572b0b8868eae90c",
+        "status": "success",
+        "block": 60942715,
+        "gasUsed": 608843,
+        "ms": 3382,
+        "at": "2026-11-12T10:54:29.637Z"
+      }
+    ],
+    "seeded": {
+      "kai-shield-pile-in": true,
+      "kai-send-oto-pile-in": true,
+      "oto-unshield-pile-in": true,
+      "oto-redeem-pile-in": true,
+      "oto-shield-sprout": true,
+      "oto-send-mira-sprout": true,
+      "mira-unshield-sprout": true,
+      "mira-sell-sprout": true,
+      "mira-shield-balloons": true,
+      "oto-shield-glow-up": true
+    }
   }
 }
