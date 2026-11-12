@@ -47,7 +47,7 @@ const SORTS = [
  * **Posts** are the feed as a list, for someone who wants to compare
  * markets instead of scrolling pictures: each one's cap, floor, and where it
  * is in its life (sealed-bid opening, curve, graduated). **Traders** ranks
- * the accounts by what they took out of every post's fill log on NEAR.
+ * the accounts by what they took out of every post's fill log on Fuji.
  *
  * Every Trade button opens the same sheet the coin screen uses.
  */
@@ -151,9 +151,9 @@ export default function TradeScreen() {
           ) : (
             <View style={{ gap: 14 }}>
               <Intro
-                pill="NEAR testnet"
+                pill="Fuji testnet"
                 title="Every post is a market."
-                body="Each post is its own NEAR account: a sealed-bid opening, then a bonding curve priced in NEAR, with a floor every holder can redeem."
+                body="Each post is its own coin: a sealed-bid opening, then a bonding curve priced in AVAX, with a floor every holder can redeem."
               />
               {markets.data!.posts.map((coin) => (
                 <MarketCard
@@ -186,7 +186,7 @@ export default function TradeScreen() {
 
 /** What this list is, once, in the app's one dark panel. */
 function Intro({
-  pill = "NEAR testnet",
+  pill = "Fuji testnet",
   title = "Every post is a market.",
   body = "",
 }: {
@@ -267,15 +267,15 @@ function MarketCard({
           </View>
           <View style={[styles.preBadge, styles.badgeHeart]}>
             <Text style={[styles.preBadgeText, styles.badgeHeartText]}>
-              {coin.near.phase === "curve" ? "CURVE" : coin.near.phase === "graduated" ? "GRAD" : "AUCTION"}
+              {coin.onchain.phase === "curve" ? "CURVE" : coin.onchain.phase === "graduated" ? "GRAD" : "AUCTION"}
             </Text>
           </View>
         </View>
 
         <View style={styles.stats}>
-          <Stat label="Cap · NEAR" value={money(coin.marketCapQuote ?? coin.marketCap, "NEAR").replace(/ NEAR$/, "")} />
+          <Stat label="Cap · AVAX" value={money(coin.marketCapQuote ?? coin.marketCap, "AVAX").replace(/ AVAX$/, "")} />
           <View style={styles.statRule} />
-          <Stat label="Floor · NEAR" value={coin.near.floorPerToken > 0 ? money(coin.near.floorPerToken, "NEAR").replace(/ NEAR$/, "") : "—"} tone={coin.near.floorPerToken > 0 ? "pos" : undefined} />
+          <Stat label="Floor · AVAX" value={coin.onchain.floorPerToken > 0 ? money(coin.onchain.floorPerToken, "AVAX").replace(/ AVAX$/, "") : "—"} tone={coin.onchain.floorPerToken > 0 ? "pos" : undefined} />
           <View style={styles.statRule} />
           <Stat label="Holders" value={coin.holders === null ? "—" : count(coin.holders) || "0"} />
         </View>
@@ -283,7 +283,7 @@ function MarketCard({
         <View style={styles.market}>
           <View style={{ flex: 1, gap: 6 }}>
             <Text style={styles.marketName} numberOfLines={1}>
-              ${coin.symbol} <Text style={styles.marketPreset}>{coin.near.sealedBids} sealed {coin.near.sealedBids === 1 ? "bid" : "bids"}</Text>
+              ${coin.symbol} <Text style={styles.marketPreset}>{coin.onchain.sealedBids} sealed {coin.onchain.sealedBids === 1 ? "bid" : "bids"}</Text>
             </Text>
             <View style={styles.rowCurve}>
               <View style={styles.rowTrack}>
@@ -301,7 +301,7 @@ function MarketCard({
           </View>
           {coin.curve.graduated ? (
             <Pill label="Graduated" />
-          ) : coin.near.phase !== "curve" ? (
+          ) : coin.onchain.phase !== "curve" ? (
             <Tappable onPress={onOpen} to={0.94}>
               <View style={styles.tradeButton} accessibilityRole="button" accessibilityLabel={`Open the auction for $${coin.symbol}`}>
                 <Text style={styles.tradeText}>{phaseLabel(coin, null)}</Text>
@@ -546,7 +546,7 @@ function TraderBoard({
                       }}
                     >
                       {(trader.realised ?? 0) > 0 ? "+" : ""}
-                      {money(trader.realised, "NEAR")}
+                      {money(trader.realised, "AVAX")}
                     </Mono>
                     <Caption>taken</Caption>
                   </Col>
@@ -555,12 +555,12 @@ function TraderBoard({
                 <Row gap={16} style={{ marginTop: 12 }}>
                   <Col gap={2} style={{ flex: 1 }}>
                     <Mono muted>
-                      {trader.unrealised === null ? "—" : money(trader.unrealised, "NEAR")}
+                      {trader.unrealised === null ? "—" : money(trader.unrealised, "AVAX")}
                     </Mono>
                     <Caption>Open</Caption>
                   </Col>
                   <Col gap={2} style={{ flex: 1 }}>
-                    <Mono muted>{money(trader.holding, "NEAR")}</Mono>
+                    <Mono muted>{money(trader.holding, "AVAX")}</Mono>
                     <Caption>Holding</Caption>
                   </Col>
                   <Col gap={2} style={{ flex: 1 }}>

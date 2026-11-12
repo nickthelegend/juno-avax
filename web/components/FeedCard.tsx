@@ -72,7 +72,7 @@ export function FeedCard({
   const tone = change === null ? theme.colors.text : change >= 0 ? theme.colors.pos : theme.colors.neg;
   const comments = (coin.commentCount ?? 0) + extraComments;
   const pct = coin.curve.progress * 100;
-  const n = coin.near;
+  const n = coin.onchain;
   const secondsLeft = useCountdown(n.phase === "commit" ? n.commitEndMs : n.phase === "reveal" ? n.revealEndMs : null);
   const auction = n.phase === "commit" || n.phase === "reveal" || n.phase === "settle";
 
@@ -174,7 +174,7 @@ export function FeedCard({
           <View style={styles.worth}>
             {change === null ? null : <TriangleGlyph up={change >= 0} color={tone} size={11} />}
             <Text style={[styles.worthText, { color: auction ? theme.colors.muted : tone }]}>
-              {auction ? "200 for sale" : shortNear(coin.marketCapQuote ?? coin.marketCap)}
+              {auction ? "200 for sale" : shortAvax(coin.marketCapQuote ?? coin.marketCap)}
             </Text>
           </View>
         </Tappable>
@@ -307,12 +307,12 @@ export function FeedCard({
   );
 }
 
-/** A market cap that fits the action row at 375pt: two significant figures under 1 NEAR. */
-function shortNear(value: number): string {
+/** A market cap that fits the action row at 375pt: two significant figures under 1 AVAX. */
+function shortAvax(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  if (value === 0) return "0 NEAR";
-  if (value < 1) return `${Number(value.toPrecision(2))} NEAR`;
-  return `${value < 100 ? value.toFixed(2) : Math.round(value).toLocaleString("en-US")} NEAR`;
+  if (value === 0) return "0 AVAX";
+  if (value < 1) return `${Number(value.toPrecision(2))} AVAX`;
+  return `${value < 100 ? value.toFixed(2) : Math.round(value).toLocaleString("en-US")} AVAX`;
 }
 
 /**

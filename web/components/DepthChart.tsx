@@ -59,7 +59,7 @@ export function DepthChart({ mint }: { mint: string }) {
       <Muted>Quoted against the live curve · fee excluded</Muted>
       {refusedFrom ? (
         <Warn>
-          From about {money(refusedFrom.amountIn * rate, "NEAR", { compact: true })} the contract refuses the buy: it
+          From about {money(refusedFrom.amountIn * rate, "AVAX", { compact: true })} the contract refuses the buy: it
           would leave the stock's band.
         </Warn>
       ) : null}
@@ -67,17 +67,17 @@ export function DepthChart({ mint }: { mint: string }) {
         {width > 0 ? <Chart points={points} width={width} /> : null}
       </Plot>
       <Axis>
-        <AxisText>{money(points[0].amountIn * rate, "NEAR", { compact: true })}</AxisText>
+        <AxisText>{money(points[0].amountIn * rate, "AVAX", { compact: true })}</AxisText>
         <AxisText>size, log scale</AxisText>
         <AxisText>
-          {money(points[points.length - 1].amountIn * rate, "NEAR", { compact: true })}
+          {money(points[points.length - 1].amountIn * rate, "AVAX", { compact: true })}
         </AxisText>
       </Axis>
       <Readout>
         {readout.map((p) => (
           <ReadCell key={p.amountIn}>
             <ReadValue $refused={p.allowed === false}>{p.allowed === false ? "Refused" : pct(p.curveImpact)}</ReadValue>
-            <Muted>buying {money(p.amountIn * rate, "NEAR", { compact: true })}</Muted>
+            <Muted>buying {money(p.amountIn * rate, "AVAX", { compact: true })}</Muted>
           </ReadCell>
         ))}
       </Readout>

@@ -1,20 +1,19 @@
 import { shortAddress as shortAccount } from "./chain";
+import { DEPLOYMENT } from "./deployment";
 
 /**
- * Display names for NEAR accounts.
+ * Display names for accounts.
  *
- * A NEAR account already is a name, so there is nothing to look up: a player
- * account under the Juno root shows its first label ("mira" for
- * mira.juno-k3x9.testnet), anything else shows the account without its
- * `.testnet` suffix.
+ * An Avalanche address has no name of its own. The three accounts that seeded
+ * the Fuji demo (listed in deployments/fuji.json) show the names the seed gave
+ * them; every other account shows its short address, 0x1234…cdef.
  */
-const ROOT = process.env.EXPO_PUBLIC_JUNO_FACTORY ?? "";
+const LABELS = new Map<string, string>(Object.entries(DEPLOYMENT.names as Record<string, string>).map(([address, name]) => [address.toLowerCase(), name] as [string, string]));
 
 export function rememberName(_wallet: string, _name: string) {}
 
 export function shortAddress(wallet: string): string {
-  if (ROOT && wallet.endsWith(`.${ROOT}`)) return wallet.slice(0, -ROOT.length - 1);
-  return shortAccount(wallet);
+  return LABELS.get(wallet.toLowerCase()) ?? shortAccount(wallet);
 }
 
 export function useName(wallet: string | null | undefined): string | null {

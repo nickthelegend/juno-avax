@@ -120,7 +120,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** The right rail on desktop: the NEAR held in post floors and the newest fills, read live from testnet. */
+/** The right rail on desktop: the AVAX held in post floors and the newest fills, read live from Fuji. */
 function FloorRail() {
   return (
     <ScrollView style={frame.rail} contentContainerStyle={frame.railBody} showsVerticalScrollIndicator={false}>
@@ -129,15 +129,15 @@ function FloorRail() {
   );
 }
 
-/** The left rail on desktop: what Juno is and how a post's market runs on NEAR, in plain words. Copy, not data. */
+/** The left rail on desktop: what Juno is and how a post's market runs, in plain words. Copy, not data. */
 function AboutRail() {
   // The onboarding screen already says the headline; the rail keeps the steps.
   const intro = usePathname() !== "/";
   const steps = [
-    ["Post", "A photo launches as its own NEAR account, <name>.<factory>, and that account is the coin.", "postCoin"],
-    ["Bid", "For one minute anyone can place a sealed bid. Everyone pays the same clearing price.", "envelope"],
-    ["Trade", "Then the curve opens. 20% of each buy's base price goes into a floor any holder can redeem.", "vault"],
-    ["Graduate", "A full curve graduates. Dares put the creator's bond on the line.", "cap"],
+    ["Post", "A photo launches its own coin: one contract that is the token, the auction and the vault.", "postCoin"],
+    ["Bid", "For one minute anyone can place a sealed bid. No sniping: everyone pays one clearing price.", "envelope"],
+    ["Trade", "Then the curve opens. 20% of each buy goes into a floor any holder can redeem.", "vault"],
+    ["Graduate", "A sold-out curve moves everything it raised into the floor. Dares put the creator's bond on the line.", "cap"],
   ] as const;
   return (
     <ScrollView style={frame.about} contentContainerStyle={frame.aboutBody} showsVerticalScrollIndicator={false}>
@@ -145,8 +145,8 @@ function AboutRail() {
         <JunoMark size={30} color={theme.colors.text} />
         <Text style={frame.word}>juno</Text>
       </View>
-      {intro ? <Text style={frame.headline}>Every post is a market.</Text> : null}
-      {intro ? <Text style={frame.lede}>On NEAR, every post opens with a sealed-bid auction and keeps a floor you can always redeem.</Text> : null}
+      {intro ? <Text style={frame.headline}>Every post is a coin.</Text> : null}
+      {intro ? <Text style={frame.lede}>On Avalanche, every post opens with a sealed-bid auction and keeps a floor you can always redeem.</Text> : null}
       <View style={frame.aboutArt}>
         <BrandImage art="postCard" alt="" size={176} float="bob" eager />
       </View>

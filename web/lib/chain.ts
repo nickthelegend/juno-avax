@@ -1,62 +1,49 @@
 /**
  * The chain the app talks to, and everything that depends on which one it is.
  *
- * Juno on NEAR runs on NEAR testnet. Every post is a named sub-account of the
- * factory (`<slug>.<factory>`), and that account is the coin: its contract
- * holds the sealed-bid opening auction, the bonding curve, the redeemable
- * floor and the dare bond. One place, so no screen hardcodes an explorer, a
- * network name or an RPC.
+ * Juno on Avalanche runs on the Fuji C-Chain (43113). The factory lists every
+ * post; each post is its own contract and coin, holding the sealed-bid opening
+ * auction, the bonding curve, the redeemable floor and the dare bond. One
+ * place, so no screen hardcodes an explorer, a network name or an RPC.
  */
-import { TESTNET_RPC } from "@juno/sdk";
+import { BaseError, ContractFunctionRevertedError, type Address } from "viem";
+import { FUJI_CHAIN_ID, FUJI_EXPLORER, FUJI_RPC } from "@juno/sdk";
 
-export const RPC_URL = process.env.EXPO_PUBLIC_NEAR_RPC_URL || "https://near-testnet.drpc.org";
-/**
- * Public testnet RPCs tried in order when one throttles (FastNEAR answers a
- * burst with a 429 that carries no CORS header, which a browser reports as a
- * failed fetch). Reads only; every one of them is a real NEAR testnet node.
- */
-export const RPC_URLS: string[] = [...new Set([RPC_URL, TESTNET_RPC, "https://near-testnet.drpc.org", "https://rpc.testnet.near.org"])];
-/** The factory account every post is a sub-account of. Null means Setup required. */
-export const FACTORY: string | null = process.env.EXPO_PUBLIC_JUNO_FACTORY || null;
-/** The relayer that creates email accounts and submits NEP-366 meta transactions. */
-export const RELAYER_URL: string | null = process.env.EXPO_PUBLIC_RELAYER_URL?.replace(/\/$/, "") || null;
-/** A mainnet account to name in 1Click dry quotes. No swap is ever sent from the app. */
-export const MAINNET_ACCOUNT: string | null = process.env.EXPO_PUBLIC_NEAR_MAINNET_ACCOUNT || null;
+export const CHAIN_ID = FUJI_CHAIN_ID;
+export const RPC_URL = process.env.EXPO_PUBLIC_FUJI_RPC_URL || FUJI_RPC;
+/** Public Fuji RPCs tried in order when one throttles. Reads only; each is a real Fuji node. */
+export const RPC_URLS: string[] = [...new Set([RPC_URL, FUJI_RPC, "https://avalanche-fuji-c-chain-rpc.publicnode.com"])];
+/** The JunoFactory every post was created by. Null means Setup required. */
+export const FACTORY: Address | null = (process.env.EXPO_PUBLIC_JUNO_FACTORY as Address | undefined) || null;
 
 export const IS_TESTNET = true;
-export const IS_FORK = false;
-export const NETWORK_NAME = "NEAR testnet";
+export const NETWORK_NAME = "Avalanche Fuji";
 /** What the money is, said once wherever a balance is shown. */
-export const NETWORK_LABEL = "NEAR testnet · test NEAR, no real money";
-export const EXPLORER_NAME = "NearBlocks";
-const EXPLORER = "https://testnet.nearblocks.io";
+export const NETWORK_LABEL = "Avalanche Fuji · test AVAX, no real money";
+export const EXPLORER_NAME = "Snowtrace";
+export const FAUCET_URL = "https://core.app/tools/testnet-faucet/?subnet=c&token=c";
 
-/** An explorer link. `address` covers accounts and contracts alike: on NEAR they are the same thing. */
 export function explorer(kind: "tx" | "address" | "token", id: string): string {
-  if (kind === "tx") return `${EXPLORER}/txns/${id}`;
-  return `${EXPLORER}/address/${id}`;
+  if (kind === "tx") return `${FUJI_EXPLORER}/tx/${id}`;
+  if (kind === "token") return `${FUJI_EXPLORER}/token/${id}`;
+  return `${FUJI_EXPLORER}/address/${id}`;
 }
 
-export function validAddress(value: string | null | undefined): value is string {
-  return !!value && /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(value) && value.length >= 2 && value.length <= 64;
+export function validAddress(value: string | null | undefined): value is Address {
+  return !!value && /^0x[0-9a-fA-F]{40}$/.test(value);
 }
 
-/** Accounts are shown as they are on chain. */
 export function displayAddress(value: string): string {
   return value;
 }
 
-/**
- * A NEAR account, short enough for a row: the `.testnet` suffix goes, and a
- * long name keeps its head and tail.
- */
-export function shortAddress(value: string, head = 10, tail = 6): string {
-  const bare = value.replace(/\.testnet$/, "");
-  return bare.length > head + tail + 1 ? `${bare.slice(0, head)}…${bare.slice(-tail)}` : bare;
+/** 0x1234…cdef */
+export function shortAddress(value: string, head = 6, tail = 4): string {
+  return value.length > head + tail + 1 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
 }
 
 export function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
-  return !!a && !!b && a === b;
+  return !!a && !!b && a.toLowerCase() === b.toLowerCase();
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,7 +55,7 @@ export type TxFailure = {
   message: string;
   /** The person backed out. Say nothing. */
   cancelled: boolean;
-  /** The contract's ERR_* code, when there was one. */
+  /** The contract's custom error name, when there was one. */
   reason: string | null;
 };
 
@@ -83,58 +70,76 @@ export class TxError extends Error {
   }
 }
 
-/** The contract's panics, one line each. */
+/** The contracts' custom errors, one line each. */
 const REASONS: Record<string, string> = {
-  ERR_COMMIT_CLOSED: "The sealed-bid window has closed.",
-  ERR_REVEAL_WINDOW: "Bids can only be revealed in the minute after bidding closes.",
-  ERR_SETTLE_WINDOW: "The auction cannot be settled yet.",
-  ERR_DUPLICATE_BID: "You already placed a sealed bid on this post.",
-  ERR_FIXED_ESCROW: "A sealed bid escrows exactly 1 NEAR.",
-  ERR_HASH: "That reveal does not match your sealed bid.",
-  ERR_ESCROW: "Amount × max price is more than the 1 NEAR you escrowed.",
-  ERR_CURVE_CLOSED: "The curve is closed: the auction has not settled, or the post graduated.",
-  ERR_PAYMENT: "The price moved. Try again.",
-  ERR_SELL: "Nothing to sell at this size.",
-  ERR_BALANCE: "You do not hold that many.",
-  ERR_REDEEM: "Nothing to redeem yet.",
-  ERR_QUANTITY: "That is more than the curve has left.",
-  ERR_STORAGE_DEPOSIT: "Launching a post needs 3 NEAR for its account, plus any dare bond.",
-  ERR_SLUG: "Names are 2–32 lowercase letters, digits or dashes.",
-  ERR_DUPLICATE: "A post with that name already exists.",
-  ERR_CREATOR: "Only the creator can do that.",
-  ERR_PROOF: "Only the creator can post the dare proof.",
-  ERR_VOTE: "Only holders vote, once each.",
-  ERR_VOTE_WINDOW: "The dare vote is closed.",
-  ERR_DARE_WINDOW: "The dare cannot be finalised yet.",
+  CommitClosed: "The sealed-bid window has closed.",
+  RevealWindow: "Bids can only be revealed in the minute after bidding closes.",
+  SettleWindow: "The auction cannot be settled yet.",
+  DuplicateBid: "You already placed a sealed bid on this post.",
+  FixedEscrow: "A sealed bid escrows exactly 0.005 AVAX.",
+  TooManyBids: "This auction is full (64 bids).",
+  NoCommit: "This account has no sealed bid here.",
+  BadBid: "That bid is not valid: 1–200 tokens at no less than 0.000001 AVAX each.",
+  HashMismatch: "That reveal does not match your sealed bid.",
+  EscrowExceeded: "Amount × max price is more than the 0.005 AVAX you escrowed.",
+  NotSettled: "The opening auction has not settled yet.",
+  NoRefund: "Nothing left to refund.",
+  CurveClosed: "The curve is closed: this post graduated. You can still redeem against the floor.",
+  Payment: "The price moved. Try again.",
+  SellTooLarge: "Nothing to sell at this size.",
+  Slippage: "The price moved past your limit. Try again.",
+  Balance: "You do not hold that many.",
+  Redeem: "Nothing to redeem yet.",
+  Quantity: "That is more than the curve has left.",
+  OnlyCreator: "Only the creator can do that.",
+  NoDare: "This post has no dare.",
+  ProofWindow: "Proof can be posted once, within five minutes of launch.",
+  ProofInvalid: "Proof must be a link of up to 300 characters.",
+  VoteWindow: "Voting opens when proof is posted and closes five minutes after launch.",
+  NotHolder: "Only holders vote.",
+  AlreadyVoted: "You already voted.",
+  TooManyVoters: "This vote is full (64 voters).",
+  DareWindow: "The dare cannot be finalized yet.",
+  TransferFailed: "The AVAX transfer failed.",
+  Slug: "Names are 2–32 lowercase letters, digits or dashes.",
+  Duplicate: "A post with that name already exists.",
+  Metadata: "Caption up to 400 characters and a picture are required.",
+  DareBond: "A dare needs a bond (up to 2 AVAX), and a bond needs a dare.",
+  ReentrancyGuardReentrantCall: "Refused: re-entrant call.",
 };
+
+/** The custom error name inside a viem error, if the contract reverted with one. */
+function revertName(error: unknown): string | null {
+  if (error instanceof BaseError) {
+    const reverted = error.walk((e) => e instanceof ContractFunctionRevertedError);
+    if (reverted instanceof ContractFunctionRevertedError) return reverted.data?.errorName ?? null;
+  }
+  const text = error instanceof Error ? error.message : String(error ?? "");
+  const named = /reverted with (?:the following )?(?:custom error|reason)[^:]*:\s*\n?\s*([A-Za-z]+)\(/.exec(text)?.[1];
+  if (named) return named;
+  const known = Object.keys(REASONS).find((name) => new RegExp(`\\b${name}\\b`).test(text));
+  return known ?? null;
+}
 
 export function describeTxError(error: unknown): TxFailure {
   if (error instanceof TxError) {
     return { message: error.cancelled ? "" : error.message, cancelled: error.cancelled, reason: error.reason };
   }
-  const text = error instanceof Error ? error.message : typeof error === "string" ? error : "The transaction failed";
-  if (/cancel/i.test(text) && /sign/i.test(text)) return { message: "", cancelled: true, reason: null };
-  // A browser wallet: the person closed its window or cancelled.
-  if (/User closed the window|User cancelled|user rejected|rejected by (the )?user|didn't complete the action/i.test(text)) {
+  const text = error instanceof Error ? (error as Error & { shortMessage?: string }).shortMessage || error.message : typeof error === "string" ? error : "The transaction failed";
+  const code = (error as { code?: number } | null)?.code;
+  if (code === 4001 || /user rejected|user denied|rejected the request|cancelled|canceled/i.test(text)) {
     return { message: "", cancelled: true, reason: null };
   }
-  if (/popup window|pop-up|Popup window blocked/i.test(text)) {
-    return { message: "Your browser blocked the wallet window. Allow pop-ups for this site, then try again.", cancelled: false, reason: null };
+  const name = revertName(error);
+  if (name) return { message: REASONS[name] ?? `The contract refused it (${name}).`, cancelled: false, reason: name };
+  if (/insufficient funds|exceeds the balance|not enough/i.test(text)) {
+    return { message: "Not enough test AVAX for this and its gas. Top up from the Fuji faucet.", cancelled: false, reason: null };
   }
-  if (/No Meteor account found/i.test(text)) {
-    return { message: "Meteor Wallet has no account yet. Create or import a testnet account there, then connect again.", cancelled: false, reason: null };
+  if (/chain|network/i.test(text) && /mismatch|switch|unrecognized|does not match/i.test(text)) {
+    return { message: "Switch your wallet to Avalanche Fuji (43113) and try again.", cancelled: false, reason: null };
   }
-  if (/Wallet not signed in/i.test(text)) return { message: "Your NEAR wallet session ended. Sign in again.", cancelled: false, reason: null };
-  const code = /ERR_[A-Z_]+/.exec(text)?.[0] ?? null;
-  if (code) return { message: REASONS[code] ?? `The contract refused it (${code}).`, cancelled: false, reason: code };
-  if (/NotEnoughBalance|LackBalanceForState|not enough balance|insufficient/i.test(text)) {
-    return { message: "Not enough NEAR for this and its gas.", cancelled: false, reason: null };
-  }
-  if (/429|rate limit|too many requests|timeout|timed out|fetch failed|network/i.test(text)) {
+  if (/429|rate limit|too many requests|timeout|timed out|fetch failed|failed to fetch|HTTP request failed/i.test(text)) {
     return { message: "The network is busy. Try again in a moment.", cancelled: false, reason: null };
   }
-  // A panic that is not one of the contract's ERR_ codes: show the panic, not the JSON around it.
-  const panic = /Smart contract panicked: ((?:\\.|[^"\\])+)/.exec(text)?.[1];
-  if (panic) return { message: `The contract refused it: ${panic.replace(/\\n/g, " ").slice(0, 180)}`, cancelled: false, reason: null };
   return { message: text.split("\n")[0]!.slice(0, 220), cancelled: false, reason: null };
 }

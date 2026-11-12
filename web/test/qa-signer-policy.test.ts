@@ -1,26 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { QA_BUDGET, reserveQaBudget, testnetAccount, testnetRpc, validateQaTransaction } from '../lib/qa-signer-policy';
-const factory = 'juno-awkorp.testnet', account = `kai.${factory}`;
-const tx = () => ({receiverId:`sprout.${factory}`, actions:[{type:'FunctionCall',params:{methodName:'buy',args:{quantity:'2'},gas:'100000000000000',deposit:'1000000000000000000000'}}]});
-test('QA signer rejects mainnet, implicit, malformed and deceptive RPC inputs', () => {
-  for (const id of ['kai.near','a'.repeat(64),'INVALID.testnet','a..testnet']) assert.throws(()=>testnetAccount(id));
-  testnetAccount(account);
-  for (const rpc of ['https://rpc.mainnet.near.org','https://near-testnet.drpc.org.evil.example','http://near-testnet.drpc.org','https://near-testnet.drpc.org/?mainnet=1']) assert.throws(()=>testnetRpc(rpc));
-  assert.equal(testnetRpc('https://near-testnet.drpc.org/'),'https://near-testnet.drpc.org');
+import { encodeFunctionData } from 'viem';
+import { factoryAbi, postAbi } from '@juno/sdk';
+import { QA_BUDGET, qaRpc, reserveQaBudget, validateQaCall } from '../lib/qa-signer-policy';
+
+const factory = '0x44b3f36175d7426218a9fcac9ab5eb6f8444e758' as const;
+const post = '0x3AD60B725BdB66A663878F894386e7bD1801C94d' as const;
+const buy = encodeFunctionData({ abi: postAbi, functionName: 'buy', args: [2n] });
+
+test('QA signer only talks to the public Fuji RPCs', () => {
+  assert.equal(qaRpc('https://api.avax-test.network/ext/bc/C/rpc'), 'https://api.avax-test.network/ext/bc/C/rpc');
+  for (const rpc of ['https://api.avax.network/ext/bc/C/rpc', 'https://api.avax-test.network.evil.example/ext/bc/C/rpc', 'http://api.avax-test.network/ext/bc/C/rpc', 'https://api.avax-test.network/ext/bc/C/rpc?x=1']) assert.throws(() => qaRpc(rpc));
 });
-test('QA signer only accepts a single permitted function call in its factory', () => {
-  assert.equal(validateQaTransaction(tx(), account, factory).methodName,'buy');
-  assert.throws(()=>validateQaTransaction({...tx(),signerId:'someone.testnet'},account,factory));
-  assert.throws(()=>validateQaTransaction({...tx(),receiverId:'other.testnet'},account,factory));
-  assert.throws(()=>validateQaTransaction({...tx(),actions:[{type:'Transfer'}]},account,factory));
-  assert.throws(()=>validateQaTransaction({...tx(),actions:[]},account,factory));
-  const expensive=tx();expensive.actions[0].params.deposit=(QA_BUDGET+1n).toString();assert.throws(()=>validateQaTransaction(expensive,account,factory));
+
+test('QA signer only signs Juno calls on the factory and its posts', () => {
+  assert.equal(validateQaCall({ to: post, data: buy, value: 10n ** 14n }, factory, true).functionName, 'buy');
+  assert.throws(() => validateQaCall({ to: post, data: buy, value: 1n }, factory, false), /only calls this Juno factory/);
+  const transfer = encodeFunctionData({ abi: postAbi, functionName: 'transfer', args: [factory, 1n] });
+  assert.throws(() => validateQaCall({ to: post, data: transfer, value: 0n }, factory, true), /refuses transfer/);
+  const launch = encodeFunctionData({ abi: factoryAbi, functionName: 'createPost', args: ['qa', '', '/a.webp', ''] });
+  assert.equal(validateQaCall({ to: factory, data: launch, value: 0n }, factory, false).target, 'factory');
+  assert.throws(() => validateQaCall({ to: post, data: buy, value: QA_BUDGET + 1n }, factory, true), /budget/);
 });
-test('one shared budget reserves deposits plus three times the maximum gas charge', () => {
-  const price=100000000n, gas=100000000000000n, deposit=1000000000000000000000n;
-  const first=reserveQaBudget(0n,deposit,gas,price);
-  assert.equal(first,deposit+gas*price*3n);
-  assert.throws(()=>reserveQaBudget(QA_BUDGET-first+1n,deposit,gas,price),/0.3/);
-  assert.throws(()=>reserveQaBudget(0n,0n,gas,-1n));
+
+test('one shared budget reserves value plus three times the gas charge', () => {
+  const first = reserveQaBudget(0n, 10n ** 15n, 200_000n, 200n);
+  assert.equal(first, 10n ** 15n + 200_000n * 200n * 3n);
+  assert.throws(() => reserveQaBudget(QA_BUDGET, 1n, 1n, 1n), /0.015/);
+  assert.throws(() => reserveQaBudget(0n, 0n, 1n, -1n));
 });

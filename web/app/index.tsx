@@ -29,11 +29,11 @@ function Onboarding() {
   const router = useRouter();
   const markets = useApi(() => loadMarkets(), []);
   const posts = markets.data?.posts ?? null;
-  // Three live figures read from the factory on NEAR testnet; dashes until it answers.
+  // Three live figures read from the factory on Fuji; dashes until it answers.
   const stats: [string, string][] = [
     [posts ? String(posts.length) : "—", "posts"],
-    [posts ? String(posts.reduce((n, c) => n + c.near.sealedBids, 0)) : "—", "sealed bids"],
-    [posts ? amountOf(posts.reduce((n, c) => n + c.near.floorVault, 0), "NEAR") : "—", "in floors"],
+    [posts ? String(posts.reduce((n, c) => n + c.onchain.sealedBids, 0)) : "—", "sealed bids"],
+    [posts ? amountOf(posts.reduce((n, c) => n + c.onchain.floorVault, 0), "AVAX") : "—", "in floors"],
   ];
 
   return (
@@ -65,15 +65,15 @@ function Onboarding() {
         <Copy>
           <Network>
             <Dot />
-            <NetworkText>{`${NETWORK_NAME} · test NEAR, no real money`}</NetworkText>
+            <NetworkText>{`${NETWORK_NAME} · test AVAX, no real money`}</NetworkText>
           </Network>
           <Display>Every post{"\n"}is a market.</Display>
           <Body muted>
-            Post a photo and it launches as its own NEAR account with a sealed-bid opening, a bonding curve and a floor you can always redeem.
+            Post a photo and it launches its own coin on Avalanche, with a sealed-bid opening, a bonding curve and a floor you can always redeem.
           </Body>
         </Copy>
 
-        <Stats accessibilityLabel="Live figures from NEAR testnet">
+        <Stats accessibilityLabel="Live figures from Avalanche Fuji">
           {stats.map(([value, label], i) => (
             <StatCell key={label} $first={i === 0}>
               <StatValue numberOfLines={1} adjustsFontSizeToFit>{value}</StatValue>

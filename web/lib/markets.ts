@@ -1,7 +1,7 @@
 import { invalidateReads, juno, type Coin } from "./api";
 import { money } from "./format";
 
-/** Juno on NEAR has one product: posts. Every coin is a post. */
+/** Juno has one product: posts. Every coin is a post. */
 export type MarketKind = "post";
 
 export function marketKind(_coin: Coin): MarketKind {

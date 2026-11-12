@@ -90,7 +90,7 @@ export default function ReelsScreen() {
   const reels = useApi(async () => {
     if (!once.ready) return null;
     const { posts } = await loadMarkets(once.viewer());
-    // Juno on NEAR has photo posts, so every post plays here full-bleed; a video post would play as a video.
+    // Seeded posts are photos, so every post plays here full-bleed; a video post would play as a video.
     return [...posts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   }, [once.ready]);
 
@@ -158,7 +158,7 @@ export default function ReelsScreen() {
         <NightState
           art
           title="No posts yet"
-          detail="Every post is its own market on NEAR. Post one and it lands here."
+          detail="Every post is its own coin on Avalanche. Post one and it lands here."
           action={{ label: "Post a photo", onPress: () => router.push("/(tabs)/post" as never) }}
         />
       ) : (
@@ -450,13 +450,13 @@ function Reel({
             <Text style={styles.dockMuted} numberOfLines={1}>
               {coin.curve.graduated
                 ? "Graduated · redeem against the floor"
-                : coin.near.phase !== "curve"
-                  ? `Sealed-bid opening · ${coin.near.sealedBids} ${coin.near.sealedBids === 1 ? "bid" : "bids"}`
+                : coin.onchain.phase !== "curve"
+                  ? `Sealed-bid opening · ${coin.onchain.sealedBids} ${coin.onchain.sealedBids === 1 ? "bid" : "bids"}`
                   : `${progressLabel(pct)} to graduation`}
             </Text>
           </View>
         </Pressable>
-        {coin.curve.graduated || coin.near.phase !== "curve" ? null : (
+        {coin.curve.graduated || coin.onchain.phase !== "curve" ? null : (
           <>
             <Tappable onPress={() => onTrade("sell")} to={0.94}>
               <View style={styles.sell} accessibilityRole="button" accessibilityLabel={`Sell $${coin.symbol}`}>

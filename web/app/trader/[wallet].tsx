@@ -235,11 +235,11 @@ export default function TraderScreen() {
                 <Caption>Profit taken</Caption>
                 <Taken $tone={(row.realised ?? 0) > 0 ? "pos" : (row.realised ?? 0) < 0 ? "neg" : "flat"}>
                   {(row.realised ?? 0) > 0 ? "+" : ""}
-                  {money(row.realised, "NEAR", { compact: false })}
+                  {money(row.realised, "AVAX", { compact: false })}
                 </Taken>
               </Col>
               <Col gap={2} style={{ alignItems: "flex-end" }}>
-                <Mono muted>{row.unrealised === null ? "—" : money(row.unrealised, "NEAR")}</Mono>
+                <Mono muted>{row.unrealised === null ? "—" : money(row.unrealised, "AVAX")}</Mono>
                 <Caption>Still open</Caption>
               </Col>
             </Row>
@@ -252,7 +252,7 @@ export default function TraderScreen() {
                 label="Win rate"
               />
               <Stat
-                value={row.bestExit === null ? "—" : money(row.bestExit, "NEAR")}
+                value={row.bestExit === null ? "—" : money(row.bestExit, "AVAX")}
                 label="Best exit"
               />
               <Stat value={String(row.trades)} label="Fills" />

@@ -115,11 +115,11 @@ export const LANDING_CSS = `
 .jl-live-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line2); }
 .jl-acct { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; color: var(--text); text-decoration: none; min-height: 44px; overflow-wrap: anywhere; }
 a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
-.jl-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+.jl-stats { display: grid; grid-template-columns: repeat(4, 1fr); }
 .jl-stats > div { display: grid; gap: 4px; padding: 28px 0 32px 28px; border-left: 1px solid var(--line2); }
 .jl-stats > div:first-child { padding-left: 0; border-left: 0; }
 .jl-stats dt { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.jl-stats dd { font-weight: 800; font-size: clamp(44px, 6.4vw, 92px); line-height: .95; letter-spacing: -.05em; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.jl-stats dd { font-weight: 800; font-size: clamp(40px, 4.8vw, 76px); line-height: .95; letter-spacing: -.05em; font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
 .jl-stats dd small { font-size: .3em; font-weight: 700; letter-spacing: -.01em; margin-left: .3em; color: var(--muted); vertical-align: .9em; }
 .jl-stats span { font-size: 14px; color: var(--muted); }
 .jl-tape-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -253,8 +253,9 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
   .jl-live { padding-top: 40px; }
   .jl-stats { grid-template-columns: 1fr 1fr; }
   .jl-stats > div { padding: 22px 0 24px 18px; }
-  .jl-stats > div:nth-child(3) { grid-column: 1 / -1; padding-left: 0; border-left: 0; border-top: 1px solid var(--line2); }
-  .jl-stats dd { font-size: 52px; }
+  .jl-stats > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .jl-stats > div:nth-child(n+3) { border-top: 1px solid var(--line2); }
+  .jl-stats dd { font-size: 44px; }
   .jl-tape-row { grid-template-columns: 1fr; }
   .jl-sec { padding-top: 96px; }
   .jl-head { margin-bottom: 32px; }

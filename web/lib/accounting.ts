@@ -1,4 +1,4 @@
-import { formatNear } from "@juno/sdk";
+import { formatAvax } from "@juno/sdk";
 
 /** Moving average cost from the contract's chronological fills, excluding gas. */
 export type Fill = { kind: 'auction' | 'buy' | 'sell' | 'redeem'; quantity: string; total: string; ms: number };
@@ -11,7 +11,7 @@ export function positionAccounting(fills: Fill[], balance: number, price: number
   const exits: number[] = [];
   for (const fill of [...fills].sort((a, b) => a.ms - b.ms)) {
     const quantity = Number(fill.quantity);
-    const total = Number(formatNear(BigInt(fill.total), 24));
+    const total = Number(formatAvax(BigInt(fill.total), 18));
     if (fill.kind === 'auction' || fill.kind === 'buy') {
       units += quantity;
       cost += total;
@@ -46,7 +46,7 @@ export function portfolioHistory(fills: ValuationFill[], wallet: string) {
   let started = false;
   for (const fill of [...fills].sort((a, b) => a.ms - b.ms)) {
     if (fill.price !== null) prices.set(fill.market, fill.price);
-    if (fill.account === wallet) {
+    if (fill.account.toLowerCase() === wallet.toLowerCase()) {
       const change = fill.kind === 'auction' || fill.kind === 'buy' ? fill.quantity : -fill.quantity;
       balances.set(fill.market, (balances.get(fill.market) ?? 0) + change);
       started = true;

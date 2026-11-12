@@ -2,7 +2,7 @@
  * Serve the exported web build (dist/) with a single-page fallback, so a deep
  * link like /coin/<account> loads the app instead of a 404.
  *
- *   node scripts/serve.mjs [port]   (default 8091)
+ *   node scripts/serve.mjs [port]   (default 5391)
  */
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -10,7 +10,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../dist/", import.meta.url));
-const port = Number(process.argv[2] ?? process.env.PORT ?? 8091);
+const port = Number(process.argv[2] ?? process.env.PORT ?? 5391);
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript",

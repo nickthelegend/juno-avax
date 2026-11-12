@@ -34,7 +34,7 @@ export function QuickTrade({
     <TradeSheet
       coin={coin}
       side={side}
-      quoteBalance={held?.near ?? null}
+      quoteBalance={held?.avax ?? null}
       holding={held?.token ?? null}
       onClose={onClose}
       onDone={onDone}

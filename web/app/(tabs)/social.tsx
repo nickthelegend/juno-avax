@@ -241,7 +241,7 @@ export default function SocialScreen() {
               <Placeholder
                 art
                 title="No posts yet"
-                detail="Every post here is a market on NEAR testnet. Tap + to launch the first one."
+                detail="Every post here is a coin on Avalanche Fuji. Tap + to launch the first one."
               />
             )
           ) : (

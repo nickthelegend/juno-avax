@@ -24,20 +24,19 @@ import { useWallet } from "../../lib/wallet";
 import { theme } from "../../theme";
 
 /**
- * Post — which here means launching a real market on NEAR.
+ * Post — which here means launching a real coin on Avalanche.
  *
- * Publishing calls `create_post` on the Juno factory. The factory creates a
- * named sub-account (`<name>.<factory>`), deploys the market contract to it
- * and initialises it in the same transaction: the post *is* that account.
- * The 3 NEAR attached pays for the account's storage; a dare bond is added on
- * top and held by the post until holders vote on the proof.
+ * Publishing calls `createPost` on the JunoFactory, which deploys the post's
+ * own contract in the same transaction: the post *is* that contract, its
+ * ERC-20, its auction and its vault. Launching costs only gas; a dare bond,
+ * if any, rides along as AVAX and is held by the post until the dare closes.
  *
  * The new post opens with a one-minute sealed-bid auction, a minute of
  * reveals, then its bonding curve.
  *
  * Media is a URL stored on-chain (300 characters at most). There is no Juno
- * upload server on NEAR, so the picker offers Juno's own art (served by this
- * app) or any https image URL.
+ * upload server, so the picker offers Juno's own art (served by this app) or
+ * any https image URL.
  */
 
 /** Juno's own art, served from this app's /art. Square, so it sits in the feed as a photo would. */
@@ -52,7 +51,7 @@ const ART = [
 
 const KINDS = [
   { id: "plain", label: "Plain post", blurb: "A sealed-bid opening, then the curve. Holders can always redeem against the floor." },
-  { id: "dare", label: "Dare post", blurb: "Put NEAR behind a promise. Holders vote on your proof; flake and the bond is split among them." },
+  { id: "dare", label: "Dare post", blurb: "Put AVAX behind a promise. Holders vote on your proof; flake and the bond goes into their floor." },
 ] as const;
 
 export default function PostScreen() {
@@ -68,7 +67,7 @@ export default function PostScreen() {
     if (format === "dare" || format === "post") setKind(format === "dare" ? "dare" : "plain");
   }, [format]);
   const [dare, setDare] = useState("");
-  const [bond, setBond] = useState("0.5");
+  const [bond, setBond] = useState("0.02");
   const [status, setStatus] = useState<string | null>(null);
   const [log, setLog] = useState<LogEntry[]>([]);
   const note = (entry: Omit<LogEntry, "at">) => setLog((current) => [...current, { ...entry, at: new Date() }]);
@@ -97,7 +96,7 @@ export default function PostScreen() {
         : !captionOk
           ? "Caption is too long"
           : !dareOk
-            ? "A dare needs its promise and a bond up to 2 NEAR"
+            ? "A dare needs its promise and a bond up to 2 AVAX"
             : null;
 
   async function finish(account: string) {
@@ -127,26 +126,25 @@ export default function PostScreen() {
         caption: caption.trim(),
         mediaUrl: chosen,
         dare: kind === "dare" ? dare.trim() : "",
-        dareBondNear: kind === "dare" ? bondNear : 0,
+        dareBondAvax: kind === "dare" ? bondNear : 0,
       });
       const sent = await wallet.send(built.steps, {
         onProgress: (at) =>
           setStatus(
-            at.phase === "signing"
-              ? wallet.via === "wallet"
-                ? `${at.label}: approve it in your wallet…`
-                : `${at.label}: signing on this device…`
-              : at.phase === "confirming"
-                ? wallet.via === "wallet"
+            at.phase === "checking"
+              ? `${at.label}: checking with ${NETWORK_NAME}…`
+              : at.phase === "signing"
+                ? `${at.label}: approve it in ${wallet.walletName ?? "your wallet"}…`
+                : at.phase === "confirming"
                   ? `${at.label}: confirming on ${NETWORK_NAME}…`
-                  : `${at.label}: relaying to ${NETWORK_NAME}…`
-                : `${at.label}: final`,
+                  : `${at.label}: final in ${(((at.blockMs ?? at.ms) ?? 0) / 1000).toFixed(2)} s`,
           ),
       });
       const launchHash = sent.hashes[sent.hashes.length - 1]!;
-      note({ label: "create_post final on NEAR testnet", receipt: launchHash, kind: "tx" });
-      note({ label: "Post account created", receipt: built.account, kind: "address" });
-      await finish(built.account);
+      note({ label: `createPost final in ${(((sent.blockMs[0] ?? sent.finalityMs[0]) ?? 0) / 1000).toFixed(2)} s`, receipt: launchHash, kind: "tx" });
+      const post = await juno.postFromLaunch(launchHash);
+      note({ label: "Post contract deployed", receipt: post, kind: "address" });
+      await finish(post);
     } catch (caught) {
       const failure = describeTxError(caught);
       setError(failure.cancelled ? null : failure.message || "Launch failed");
@@ -166,8 +164,8 @@ export default function PostScreen() {
         >
           <Text style={styles.title}>Post a photo</Text>
           <Text style={styles.lede}>
-            Publishing creates this post&apos;s own NEAR account with its market inside: a sealed-bid opening, a bonding
-            curve priced in NEAR, and a floor every holder can redeem. The post is the market.
+            Publishing deploys this post&apos;s own coin: a one-minute sealed-bid opening, a bonding curve in AVAX, and a
+            floor every holder can redeem.
           </Text>
 
           <MediaPicker media={chosen} onPick={setMedia} disabled={busy} />
@@ -188,7 +186,7 @@ export default function PostScreen() {
             <Field
               label="Name"
               hint={name.length > 0 && !slugOk ? "2–32 lowercase letters, digits or dashes" : undefined}
-              note={slugOk && FACTORY ? `${slug}.${FACTORY} · ticker $${slug.toUpperCase()}` : undefined}
+              note={slugOk ? `ticker $${slug.replace(/-/g, "").slice(0, 11).toUpperCase()}` : undefined}
             >
               <TextInput
                 value={name}
@@ -216,7 +214,7 @@ export default function PostScreen() {
 
           <Text style={styles.sectionTitle}>Kind</Text>
           <Text style={styles.sectionLede}>
-            Every post uses the same sixteen-segment weighted curve, priced in NEAR. 20% of each buy's base price goes into the floor.
+            Every post uses the same sixteen-segment curve, priced in AVAX. 20% of each buy goes into the floor.
           </Text>
 
           <View style={styles.presets}>
@@ -248,7 +246,7 @@ export default function PostScreen() {
                         <TextInput
                           value={bond}
                           onChangeText={(next) => setBond(next.replace(/[^0-9.]/g, ""))}
-                          placeholder="Bond in NEAR"
+                          placeholder="Bond in AVAX"
                           placeholderTextColor={theme.colors.faint}
                           keyboardType="decimal-pad"
                           style={styles.input}
@@ -271,7 +269,7 @@ export default function PostScreen() {
           {log.length > 0 ? <LaunchLog entries={log} /> : null}
 
           <Button
-            label={status ?? `Launch post · ${kind === "dare" && bondNear > 0 ? 3 + bondNear : 3} NEAR`}
+            label={status ?? (kind === "dare" && bondNear > 0 ? `Launch post · ${bondNear} AVAX bond` : "Launch post")}
             tall
             onPress={launch}
             loading={busy}
@@ -280,9 +278,7 @@ export default function PostScreen() {
           {!busy && missing ? <Text style={styles.missing}>{missing}</Text> : null}
           {busy && status ? <Text style={styles.missing}>{status}</Text> : null}
           <Text style={styles.footnote}>
-            {wallet.via === "wallet"
-              ? "One approval in your wallet: your account pays the gas and the 3 NEAR that funds the post account's storage. Bids, buys and redemptions all land on that account."
-              : "One signature, relayed as a NEP-366 meta transaction: the relayer fronts the gas and the 3 NEAR that funds the post account's storage. Bids, buys and redemptions all land on that account."}
+            One approval in your wallet. Your account pays the gas{kind === "dare" ? " and the bond" : ""}; the post&apos;s contract holds every bid, buy and floor from then on.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

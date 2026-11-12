@@ -9,11 +9,11 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const file = new URL("../dist/index.html", import.meta.url);
+const file = new URL(`../${process.argv[2] ?? "dist"}/index.html`, import.meta.url);
 const app = process.env.EXPO_PUBLIC_APP_URL ?? "";
-const title = "Juno on NEAR — every post is a market";
+const title = "Juno — every post is a coin, on Avalanche";
 const description =
-  "Post a photo and it launches as its own NEAR account: a one-minute sealed-bid opening auction, a bonding curve priced in NEAR, a floor every holder can redeem, and dare bonds. NEAR testnet.";
+  "Post a photo and it launches its own coin on Avalanche: a one-minute sealed-bid opening at one clearing price, a bonding curve in AVAX, a floor every holder can redeem, and dare bonds. Fuji testnet.";
 const image = `${app.replace(/\/$/, "")}/brand/og.webp`;
 
 const tags = [

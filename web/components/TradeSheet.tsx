@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Modal, Platform } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import styled from "styled-components/native";
-import { dryQuote } from "@juno/sdk";
 
 import { Object3D } from "./art3d";
 import { Button, Caption, Col, ExternalGlyph, Label, Row } from "./kit";
-import { juno, toYocto, type Coin, type SwapQuote } from "../lib/api";
-import { describeTxError, explorer, EXPLORER_NAME, MAINNET_ACCOUNT, NETWORK_NAME } from "../lib/chain";
+import { juno, type Coin, type SwapQuote } from "../lib/api";
+import { describeTxError, explorer, EXPLORER_NAME, NETWORK_NAME } from "../lib/chain";
+import { seconds } from "../lib/finality";
 import { money, tokens } from "../lib/useApi";
 import { useWallet, type SendProgress } from "../lib/wallet";
 import { theme } from "../theme";
@@ -19,12 +19,12 @@ import { theme } from "../theme";
  * including the quote the person is deciding on — and a purpose-built pad
  * keeps the number, the quote and the button visible at once.
  *
- * ## On NEAR
+ * ## On Avalanche
  *
- * A post token is one whole unit (the contract has no decimals), so the pad
+ * A post coin is one whole unit (the ERC-20 has 0 decimals), so the pad
  * takes whole tokens on every side. The quote is the contract's own maths:
- * a buy is `quote_buy` read from the post's account right before signing;
- * a sell and a redemption use `@juno/sdk`'s mirror of the contract.
+ * a buy is `quoteBuy` read from the post right before signing; a sell and a
+ * redemption use `@juno/sdk`'s mirror of the contract.
  *
  * - **Buy** pays the curve (or the floor, if that is higher), plus 20% into
  *   the floor and a 1% fee split between the creator and graduation.
@@ -32,14 +32,13 @@ import { theme } from "../theme";
  * - **Redeem** burns tokens against the floor at any time — even after
  *   graduation — minus 1% that stays for the remaining holders.
  *
- * The 1Click line under a buy is a mainnet `dry: true` quote: what the same
- * NEAR would cost in USDC on Base through NEAR Intents. No swap is sent.
+ * When the trade lands, the sheet shows how long Avalanche took to make it
+ * final: measured from broadcast to a readable receipt, never assumed.
  */
 
 type Side = "buy" | "sell" | "redeem";
 const QUICK_BUY = [1, 10, 50, 100];
 const QUICK_SHARE = [0.25, 0.5, 0.75, 1];
-const BASE_USDC = "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near";
 
 type Stage = "entry" | "confirming" | "done";
 
@@ -59,14 +58,14 @@ export function TradeSheet({
   onDone: () => void;
   /** Tokens held, for a sell or redemption. Null when unknown. */
   holding?: number | null;
-  /** NEAR held, for a buy. Null when unknown. */
+  /** AVAX held, for a buy. Null when unknown. */
   quoteBalance?: number | null;
   initialAmount?: string;
-  /** A trade confirmed, with the NEAR spent or received. */
+  /** A trade confirmed, with the AVAX spent or received. */
   onFilled?: (quoteAmount: number) => void;
 }) {
   const wallet = useWallet();
-  const curveOpen = coin.near.phase === "curve";
+  const curveOpen = coin.onchain.phase === "curve";
   const [side, setSide] = useState<Side>(curveOpen ? initialSide : "redeem");
   const [amount, setAmount] = useState(initialAmount);
   const [quote, setQuote] = useState<SwapQuote | null>(null);
@@ -76,12 +75,12 @@ export function TradeSheet({
   const [txHash, setTxHash] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ labels: string[]; at: SendProgress } | null>(null);
   const [landedAt, setLandedAt] = useState<Date | null>(null);
-  const [intents, setIntents] = useState<{ text: string; tone: "ok" | "setup" | "error" } | null>(null);
+  const [finalMs, setFinalMs] = useState<{ receipt: number; block: number | null } | null>(null);
 
   const value = Number(amount || "0");
   const valid = Number.isInteger(value) && value > 0;
   const balance = side === "buy" ? quoteBalance : holding;
-  const room = side === "buy" ? 800 - coin.near.curveSold : side === "sell" ? coin.near.curveSold : coin.near.totalSupply;
+  const room = side === "buy" ? 800 - coin.onchain.curveSold : side === "sell" ? coin.onchain.curveSold : coin.onchain.totalSupply;
 
   const blocker = useMemo((): { text: string; short: string } | null => {
     if (side !== "redeem" && !curveOpen) {
@@ -89,15 +88,15 @@ export function TradeSheet({
         ? { text: "This post graduated: its curve is closed. You can still redeem against the floor.", short: "Curve closed" }
         : { text: "The curve opens when the sealed-bid auction settles.", short: "Auction first" };
     }
-    if (side === "redeem" && !(coin.near.floorVault > 0)) return { text: "The floor is empty until the auction settles.", short: "Nothing to redeem" };
+    if (side === "redeem" && !(coin.onchain.floorVault > 0)) return { text: "The floor is empty until the auction settles.", short: "Nothing to redeem" };
     if (!valid) return null;
     if (value > room) return { text: `At most ${room} tokens on this side right now.`, short: `Max ${room}` };
     if (side !== "buy" && balance !== null && value > balance) return { text: `You hold ${balance} ${coin.symbol}.`, short: `Not enough ${coin.symbol}` };
     if (side === "buy" && balance !== null && quote && quote.amountIn > balance) {
-      return { text: `This costs ${money(quote.amountIn, "NEAR", { compact: false })} and you have ${money(balance, "NEAR")}.`, short: "Not enough NEAR" };
+      return { text: `This costs ${money(quote.amountIn, "AVAX", { compact: false })} and you have ${money(balance, "AVAX")}.`, short: "Not enough AVAX" };
     }
     return null;
-  }, [side, curveOpen, coin.curve.graduated, coin.near.floorVault, coin.symbol, valid, value, room, balance, quote]);
+  }, [side, curveOpen, coin.curve.graduated, coin.onchain.floorVault, coin.symbol, valid, value, room, balance, quote]);
 
   useEffect(() => {
     if (!valid || value > room || (side !== "redeem" && !curveOpen)) {
@@ -127,46 +126,6 @@ export function TradeSheet({
     };
   }, [valid, value, room, side, curveOpen, coin.address]);
 
-  // The any-chain line: a 1Click dry quote for the NEAR this buy costs.
-  useEffect(() => {
-    setIntents(null);
-    if (side !== "buy" || !quote || !(quote.amountIn > 0)) return;
-    const recipient = MAINNET_ACCOUNT;
-    if (!recipient) {
-      setIntents({ text: "Setup required: EXPO_PUBLIC_NEAR_MAINNET_ACCOUNT", tone: "setup" });
-      return;
-    }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const result = (await dryQuote({
-          originAsset: BASE_USDC,
-          destinationAsset: "nep141:wrap.near",
-          amount: toYocto(quote.amountIn).toString(),
-          swapType: "EXACT_OUTPUT",
-          recipient,
-          recipientType: "INTENTS",
-          refundTo: recipient,
-          refundType: "INTENTS",
-        })) as { quote?: { amountInFormatted?: string; timeEstimate?: number } };
-        const paid = result.quote?.amountInFormatted;
-        if (!cancelled) {
-          setIntents(
-            paid
-              ? { text: `≈ ${Number(paid).toFixed(2)} USDC on Base via 1Click${result.quote?.timeEstimate ? ` · ~${result.quote.timeEstimate}s` : ""}`, tone: "ok" }
-              : { text: "1Click returned no amount", tone: "error" },
-          );
-        }
-      } catch (caught) {
-        if (!cancelled) setIntents({ text: caught instanceof Error ? caught.message.slice(0, 120) : "1Click quote failed", tone: "error" });
-      }
-    }, 500);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [side, quote]);
-
   const press = useCallback((key: string) => {
     setError(null);
     setTxHash(null);
@@ -192,6 +151,8 @@ export function TradeSheet({
       const sent = await wallet.send(built.steps, { onProgress: (at) => setProgress({ labels, at }) });
       setTxHash(sent.hashes[sent.hashes.length - 1]!);
       setLandedAt(sent.confirmedAt);
+      const last = sent.finalityMs.length - 1;
+      setFinalMs(last >= 0 ? { receipt: sent.finalityMs[last]!, block: sent.blockMs[last] ?? null } : null);
       setStage("done");
       onFilled?.(side === "buy" ? built.quote.amountIn : built.quote.amountOut);
     } catch (caught) {
@@ -205,8 +166,8 @@ export function TradeSheet({
 
   const receiving = quote
     ? side === "buy"
-      ? `Costs ${money(quote.amountIn, "NEAR", { compact: false })} for ${quote.amountOut} ${coin.symbol}`
-      : `You'll receive ${money(quote.amountOut, "NEAR", { compact: false })}${quote.fromFloor ? " from the floor" : ""}`
+      ? `Costs ${money(quote.amountIn, "AVAX", { compact: false })} for ${quote.amountOut} ${coin.symbol}`
+      : `You'll receive ${money(quote.amountOut, "AVAX", { compact: false })}${quote.fromFloor ? " from the floor" : ""}`
     : null;
 
   const quickSizes = useMemo(() => {
@@ -266,6 +227,16 @@ export function TradeSheet({
                   : `Redeemed ${value} ${coin.symbol} against the floor`}{" "}
               — final on {NETWORK_NAME}.
             </Label>
+            {finalMs !== null ? (
+              <Finality accessibilityLabel={`Final ${seconds(finalMs.block ?? finalMs.receipt)} after broadcast`}>
+                <FinalityFigure>{seconds(finalMs.block ?? finalMs.receipt)}</FinalityFigure>
+                <FinalityNote>
+                  {finalMs.block !== null
+                    ? `in a final block after you sent it · receipt read in ${seconds(finalMs.receipt)}`
+                    : "from broadcast to a readable receipt"}
+                </FinalityNote>
+              </Finality>
+            ) : null}
             <Receipt>
               tx {txHash!.slice(0, 10)}…{txHash!.slice(-8)}
               {landedAt ? ` · ${landedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}
@@ -286,8 +257,8 @@ export function TradeSheet({
                 </AmountRow>
                 <Caption>
                   {side === "redeem"
-                    ? `Floor ${money(coin.near.floorPerToken, "NEAR")} per token`
-                    : `Spot ${money(coin.priceQuote ?? null, "NEAR")} per token`}
+                    ? `Floor ${money(coin.onchain.floorPerToken, "AVAX")} per token`
+                    : `Spot ${money(coin.priceQuote ?? null, "AVAX")} per token`}
                 </Caption>
               </Col>
               <Col gap={4} style={{ alignItems: "flex-end" }}>
@@ -297,7 +268,7 @@ export function TradeSheet({
                 </TokenChip>
                 <Caption>
                   {side === "buy"
-                    ? `Balance: ${balance === null ? "—" : money(balance, "NEAR")}`
+                    ? `Balance: ${balance === null ? "—" : money(balance, "AVAX")}`
                     : `Held: ${balance === null ? "—" : `${tokens(balance)} ${coin.symbol}`}`}
                 </Caption>
               </Col>
@@ -320,12 +291,12 @@ export function TradeSheet({
                 <Label muted>Trading fee</Label>
                 <Info />
               </Row>
-              <Mono_>{quote ? money(quote.fee, "NEAR", { compact: false }) : quoting ? "…" : "—"}</Mono_>
+              <Mono_>{quote ? money(quote.fee, "AVAX", { compact: false }) : quoting ? "…" : "—"}</Mono_>
             </Line>
             {side === "buy" ? (
               <Line>
                 <Label muted>Added to the floor</Label>
-                <Mono_ style={{ color: theme.colors.pos }}>{quote ? money(quote.toFloor, "NEAR", { compact: false }) : quoting ? "…" : "—"}</Mono_>
+                <Mono_ style={{ color: theme.colors.pos }}>{quote ? money(quote.toFloor, "AVAX", { compact: false }) : quoting ? "…" : "—"}</Mono_>
               </Line>
             ) : null}
             <Line>
@@ -337,22 +308,11 @@ export function TradeSheet({
 
             <Receive>{quoting ? "Quoting against the contract…" : (receiving ?? " ")}</Receive>
 
-            {side === "buy" && intents ? (
-              <Depth>
-                <Col gap={2} style={{ flex: 1 }}>
-                  <Label style={{ fontWeight: "700", color: intents.tone === "ok" ? theme.colors.text : intents.tone === "setup" ? theme.colors.muted : theme.colors.neg }}>
-                    {intents.text}
-                  </Label>
-                  <Caption>Any-chain buy · NEAR Intents mainnet dry quote, nothing is sent</Caption>
-                </Col>
-              </Depth>
-            ) : null}
-
             {stage === "confirming" && progress ? <Steps labels={progress.labels} at={progress.at} /> : null}
 
             {!wallet.address ? (
               <Button
-                label="Sign in to trade"
+                label="Connect wallet to trade"
                 tall
                 onPress={() => {
                   onClose();
@@ -365,9 +325,11 @@ export function TradeSheet({
                 label={
                   stage === "confirming"
                     ? progress
-                      ? progress.at.phase === "signing"
-                        ? `${progress.at.label}: signing…`
-                        : `${progress.at.label}: ${wallet.via === "wallet" ? "confirming" : "relaying"}…`
+                      ? progress.at.phase === "checking"
+                        ? `${progress.at.label}: checking…`
+                        : progress.at.phase === "signing"
+                          ? `${progress.at.label}: approve in ${wallet.walletName ?? "wallet"}…`
+                          : `${progress.at.label}: confirming…`
                       : "Confirming…"
                     : blocker
                       ? blocker.short
@@ -441,6 +403,29 @@ function Info() {
     </Svg>
   );
 }
+
+const Finality = styled.View`
+  margin-top: 10px;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 18px;
+  border-radius: ${(p) => p.theme.radius.md}px;
+  background-color: ${(p) => p.theme.colors.ink};
+`;
+
+const FinalityNote = styled.Text`
+  font-size: ${(p) => p.theme.type.caption.size}px;
+  color: #a9b3a2;
+  text-align: center;
+`;
+
+const FinalityFigure = styled.Text`
+  font-size: ${(p) => p.theme.type.heading.size}px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: ${(p) => p.theme.colors.lime};
+  font-variant: tabular-nums;
+`;
 
 const WarnText = styled.Text`
   font-size: ${(p) => p.theme.type.label.size}px;

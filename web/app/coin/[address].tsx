@@ -55,12 +55,12 @@ import { theme } from "../../theme";
  * is arranged underneath in the order the questions get asked: what is this,
  * how big is it, who else is here, what are the details.
  *
- * On NEAR a coin is a post account. Under the size band sit the three things
- * only this build has: the redeemable floor, the sealed-bid opening auction
- * (live with a countdown while it runs, a record of the clearing price after)
- * and the dare. When the curve sells its last token it graduates by itself:
- * the curve closes, its liquidity stays in the post account's escrow, and the
- * floor stays redeemable.
+ * A coin is a post contract on Avalanche. Under the size band sit the three
+ * things that make it more than a meme coin: the redeemable floor, the
+ * sealed-bid opening auction (live with a countdown while it runs, a record of
+ * the clearing price after) and the dare. When the curve sells its last token
+ * it graduates by itself: the curve closes and everything it raised moves
+ * into the floor, which stays redeemable.
  */
 
 const TABS = [
@@ -73,7 +73,7 @@ type Tab = (typeof TABS)[number]["id"];
 
 export default function CoinScreen() {
   const { address: rawAddress } = useLocalSearchParams<{ address: string }>();
-  // A post is a NEAR account; account ids are lowercase.
+  // A post is a contract address; compared case-insensitively everywhere.
   const mint = (rawAddress ?? "").toLowerCase();
   const router = useRouter();
   const [sheet, setSheet] = useState<"buy" | "sell" | "redeem" | null>(null);
@@ -84,12 +84,12 @@ export default function CoinScreen() {
   // A link that is not an address is answered here, as the server would
   // answer it (400 → "No such coin"), without asking the server.
   const wellFormed = validAddress(mint);
-  const notAnAddress = () => Promise.reject(new ApiError("That is not a NEAR account.", 400));
+  const notAnAddress = () => Promise.reject(new ApiError("That is not a post address.", 400));
   const detail = useApi(() => (wellFormed ? juno.coin(mint) : notAnAddress()), [mint, revision]);
   const coin = detail.data?.coin;
 
   /*
-   * What this wallet holds: the coin, for the sell side; NEAR, for the
+   * What this wallet holds: the coin, for the sell side; AVAX, for the
    * buy side and for gas. One read, re-read after each trade.
    */
   const balances = useApi(
@@ -97,7 +97,7 @@ export default function CoinScreen() {
     [wallet.address, mint, revision],
   );
   const holding = balances.data?.token ?? null;
-  const quoteBalance = balances.data?.near ?? null;
+  const quoteBalance = balances.data?.avax ?? null;
 
   // "Copied" is a state that has to expire on its own: nothing else on the
   // screen changes to clear it.
@@ -108,8 +108,8 @@ export default function CoinScreen() {
   }, [copied]);
 
   const art = coin ? juno.still(coin.media) : null;
-  /* Every figure on this screen is in NEAR, the unit the curve prices in. */
-  const unit = coin?.quote.symbol ?? "NEAR";
+  /* Every figure on this screen is in AVAX, the unit the curve prices in. */
+  const unit = coin?.quote.symbol ?? "AVAX";
   const toQuote = (value: number) =>
     coin && coin.marketCapCurrency === "USD" && coin.quoteUsdRate ? value / coin.quoteUsdRate : value;
   const ticks = useMemo(
@@ -212,7 +212,7 @@ export default function CoinScreen() {
               </Padded>
             ) : null}
 
-            {coin.near.phase !== "curve" && coin.near.phase !== "graduated" ? (
+            {coin.onchain.phase !== "curve" && coin.onchain.phase !== "graduated" ? (
               <Padded>
                 <AuctionCard coin={coin} onChanged={detail.refresh} />
               </Padded>
@@ -316,18 +316,18 @@ export default function CoinScreen() {
                   <Caption numberOfLines={2}>Creator fees</Caption>
                 </Cell>
               </Band>
-              {/* What only NEAR has: the floor, the sealed-bid opening and the dare. */}
+              {/* What makes a post more than a meme coin: the floor, the sealed-bid opening and the dare. */}
               <FloorRow>
                 <FloorGlyph size={20} filled />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <FloorFigure>{money(coin.near.floorPerToken, unit)} floor per token</FloorFigure>
+                  <FloorFigure>{money(coin.onchain.floorPerToken, unit)} floor per token</FloorFigure>
                   <Caption>
-                    {money(coin.near.floorVault, unit)} held for {tokens(coin.near.totalSupply)} tokens. Redeemable at any time, even after graduation.
+                    {money(coin.onchain.floorVault, unit)} held for {tokens(coin.onchain.totalSupply)} tokens. Redeemable at any time, even after graduation.
                   </Caption>
                 </View>
               </FloorRow>
-              {coin.near.phase === "curve" || coin.near.phase === "graduated" ? <AuctionCard coin={coin} onChanged={detail.refresh} /> : null}
-              <DareCard coin={coin} />
+              {coin.onchain.phase === "curve" || coin.onchain.phase === "graduated" ? <AuctionCard coin={coin} onChanged={detail.refresh} /> : null}
+              <DareCard coin={coin} onChanged={detail.refresh} />
 
               {/* The creator's own payday, on their own coin. The contract
                   checks it too; the button is simply not shown to anyone else. */}
@@ -344,7 +344,7 @@ export default function CoinScreen() {
 
               {/* Raised against threshold, with both ends labelled. A bar with
                   no numbers on it is a mood. */}
-              {coin.near.phase !== "curve" && !coin.curve.graduated ? null : !coin.curve.graduated ? (
+              {coin.onchain.phase !== "curve" && !coin.curve.graduated ? null : !coin.curve.graduated ? (
                 <RaisedRow>
                   <End>{money(coin.curve.raisedQuote ?? toQuote(coin.curve.raisedUsd), unit)}</End>
                   <Track>
@@ -425,9 +425,9 @@ export default function CoinScreen() {
             </Tappable>
             {coin.curve.graduated ? (
               <Button label="Redeem against the floor" variant="ink" tall onPress={() => setSheet("redeem")} style={{ flex: 1 }} />
-            ) : coin.near.phase !== "curve" ? (
+            ) : coin.onchain.phase !== "curve" ? (
               <GraduatedNote>
-                {coin.near.phase === "settle" ? "Auction over — settle it below." : coin.near.phase === "reveal" ? "Reveals open — see the auction below." : "Sealed-bid auction open — bid below."}
+                {coin.onchain.phase === "settle" ? "Auction over — settle it below." : coin.onchain.phase === "reveal" ? "Reveals open — see the auction below." : "Sealed-bid auction open — bid below."}
               </GraduatedNote>
             ) : (
               <Button label="Buy" variant="lime" tall onPress={() => setSheet("buy")} style={{ flex: 1 }} />
@@ -577,7 +577,7 @@ function DetailsTab({ coin }: { coin: import("../../lib/api").Coin }) {
     await Clipboard.setStringAsync(displayAddress(value));
     setCopied(key);
   }
-  const n = coin.near;
+  const n = coin.onchain;
 
   return (
     <Col gap={0}>
@@ -586,7 +586,7 @@ function DetailsTab({ coin }: { coin: import("../../lib/api").Coin }) {
       <Rows>
         <DetailRow label="Created" value={new Date(coin.createdAt).toLocaleString()} shaded={false} />
         <DetailRow
-          label="Post account"
+          label="Post contract"
           value={shortAddress(coin.address)}
           shaded
           copied={copied === "token"}
@@ -594,17 +594,17 @@ function DetailsTab({ coin }: { coin: import("../../lib/api").Coin }) {
         />
         <DetailRow label="Ticker" value={coin.symbol} shaded={false} copied={copied === "ticker"} onCopy={() => void copy("ticker", coin.symbol)} />
         <DetailRow label="Network" value={NETWORK_NAME} shaded />
-        <DetailRow label="Quote" value="NEAR" shaded={false} />
+        <DetailRow label="Quote" value="AVAX" shaded={false} />
         <DetailRow label="Supply" value={`${tokens(n.totalSupply)} of 1,000`} shaded />
         <DetailRow label="Curve sold" value={`${n.curveSold} of 800`} shaded={false} />
-        <DetailRow label="Auction cleared" value={n.clearingPrice > 0 ? money(n.clearingPrice, "NEAR") : "—"} shaded />
-        <DetailRow label="Floor vault" value={money(n.floorVault, "NEAR")} shaded={false} />
-        <DetailRow label="Graduation escrow" value={money(n.graduationEscrow, "NEAR")} shaded />
+        <DetailRow label="Auction cleared" value={n.clearingPrice > 0 ? money(n.clearingPrice, "AVAX") : "—"} shaded />
+        <DetailRow label="Floor vault" value={money(n.floorVault, "AVAX")} shaded={false} />
+        <DetailRow label="Graduation escrow" value={coin.curve.graduated ? "Moved into the floor" : money(n.graduationEscrow, "AVAX")} shaded />
         {FACTORY ? <DetailRow label="Factory" value={shortAddress(FACTORY)} shaded={false} copied={copied === "factory"} onCopy={() => void copy("factory", FACTORY!)} /> : null}
       </Rows>
 
       <LinkTap onPress={() => Linking.openURL(explorer("address", coin.address))}>
-        <LinkText>The post account on {EXPLORER_NAME}</LinkText>
+        <LinkText>The post contract on {EXPLORER_NAME}</LinkText>
         <ExternalGlyph />
       </LinkTap>
       {FACTORY ? (

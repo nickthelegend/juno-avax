@@ -1,33 +1,46 @@
-/** Validation shared by the QA-only browser adapter and its Node harness. */
-export const QA_BUDGET = 3n * 10n ** 23n; // 0.3 testnet NEAR, across the run.
-export const QA_RPC_URLS = ['https://near-testnet.drpc.org', 'https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
-const ACCOUNT = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
-const METHODS = new Set(['buy', 'sell', 'redeem', 'withdraw_earnings', 'claim_refund', 'claim_dare', 'submit_proof', 'vote_proof', 'finalize_dare', 'settle', 'reveal', 'commit', 'create_post']);
+/**
+ * Rules for the QA-only signer, shared by the browser adapter and its Node
+ * harness (scripts/qa-flow.mjs). The QA signer exists only in a web build made
+ * with EXPO_PUBLIC_QA_SIGNER=1, runs only on a local preview port, and signs
+ * only Juno calls on Avalanche Fuji within a small test budget.
+ */
+import { decodeFunctionData, type Address, type Hex } from "viem";
+import { factoryAbi, postAbi } from "@juno/sdk";
 
-export function testnetAccount(id: string): void {
-  if (typeof id !== 'string' || !id.endsWith('.testnet') || id.length > 64 || !ACCOUNT.test(id)) throw Error('QA signer requires a named .testnet account.');
-}
-export function testnetRpc(endpoint: string): string {
+export const QA_CHAIN_ID = 43113;
+export const QA_BUDGET = 15n * 10n ** 15n; // 0.015 test AVAX across a run
+export const QA_RPC_URLS = ["https://api.avax-test.network/ext/bc/C/rpc", "https://avalanche-fuji-c-chain-rpc.publicnode.com"];
+const POST_CALLS = new Set(["commit", "reveal", "settle", "claimRefund", "buy", "sell", "redeem", "withdrawEarnings", "submitProof", "vote", "finalizeDare"]);
+const FACTORY_CALLS = new Set(["createPost"]);
+
+export function qaRpc(endpoint: string): string {
   const url = new URL(endpoint);
-  if (!QA_RPC_URLS.includes(url.origin) || url.pathname !== '/' || url.search || url.hash || url.username || url.password) throw Error('QA signer refuses this RPC; only the configured public testnet nodes are allowed.');
-  return url.origin;
+  const origin = `${url.origin}${url.pathname}`;
+  if (!QA_RPC_URLS.includes(origin) || url.search || url.hash || url.username || url.password) {
+    throw Error("QA signer refuses this RPC; only the public Fuji endpoints are allowed.");
+  }
+  return origin;
 }
-export type QaTransaction = { signerId?: string; receiverId: string; actions: readonly unknown[] };
-export function validateQaTransaction(transaction: QaTransaction, accountId: string, factory: string) {
-  testnetAccount(accountId); testnetAccount(factory); testnetAccount(transaction.receiverId);
-  if (transaction.signerId && transaction.signerId !== accountId) throw Error('QA signer account mismatch.');
-  if (transaction.receiverId !== factory && !transaction.receiverId.endsWith(`.${factory}`)) throw Error('QA signer only calls this Juno factory and its posts.');
-  if (!Array.isArray(transaction.actions) || transaction.actions.length !== 1) throw Error('QA signer requires one Juno function call.');
-  const action = transaction.actions[0] as { type?: string; params?: { methodName: string; args: Record<string, unknown>; gas: string | bigint; deposit: string | bigint } };
-  if (action?.type !== 'FunctionCall' || !action.params || !METHODS.has(action.params.methodName)) throw Error('QA signer refuses this action.');
-  const gas = BigInt(action.params.gas), deposit = BigInt(action.params.deposit);
-  if (gas <= 0n || gas > 150n * 10n ** 12n || deposit < 0n || deposit > QA_BUDGET) throw Error('QA signer gas/deposit exceeds the test budget.');
-  if (!action.params.args || typeof action.params.args !== 'object' || Array.isArray(action.params.args)) throw Error('QA signer requires JSON function-call arguments.');
-  return { receiverId: transaction.receiverId, methodName: action.params.methodName, args: action.params.args, gas: gas.toString(), deposit: deposit.toString() };
+
+export type QaCall = { to: Address; data: Hex; value: bigint };
+export type QaChecked = { to: Address; target: "factory" | "post"; functionName: string; args: readonly unknown[]; value: string };
+
+/** Decode a call and refuse anything that is not a Juno call within budget. `isPost` is read from the factory on chain. */
+export function validateQaCall(call: QaCall, factory: Address, isPost: boolean): QaChecked {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(call.to)) throw Error("QA signer requires a contract address.");
+  const toFactory = call.to.toLowerCase() === factory.toLowerCase();
+  if (!toFactory && !isPost) throw Error("QA signer only calls this Juno factory and its posts.");
+  const decoded = decodeFunctionData({ abi: toFactory ? factoryAbi : postAbi, data: call.data });
+  const allowed = toFactory ? FACTORY_CALLS : POST_CALLS;
+  if (!allowed.has(decoded.functionName)) throw Error(`QA signer refuses ${decoded.functionName}.`);
+  if (call.value < 0n || call.value > QA_BUDGET) throw Error("QA signer value exceeds the test budget.");
+  return { to: call.to, target: toFactory ? "factory" : "post", functionName: decoded.functionName, args: (decoded.args ?? []) as readonly unknown[], value: call.value.toString() };
 }
-export function reserveQaBudget(reserved: bigint, deposit: bigint, gas: bigint, gasPrice: bigint) {
-  if (reserved < 0n || deposit < 0n || gas <= 0n || gasPrice <= 0n) throw Error('Invalid QA budget input.');
-  const next = reserved + deposit + gas * gasPrice * 3n;
-  if (next > QA_BUDGET) throw Error('QA signer stopped: the shared 0.3 testnet NEAR budget would be exceeded.');
+
+/** Running total of value plus a generous gas allowance; throws once the run would pass QA_BUDGET. */
+export function reserveQaBudget(reserved: bigint, value: bigint, gas: bigint, gasPrice: bigint): bigint {
+  if (reserved < 0n || value < 0n || gas <= 0n || gasPrice <= 0n) throw Error("Invalid QA budget input.");
+  const next = reserved + value + gas * gasPrice * 3n;
+  if (next > QA_BUDGET) throw Error("QA signer stopped: the 0.015 test AVAX budget would be exceeded.");
   return next;
 }

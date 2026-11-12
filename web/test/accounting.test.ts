@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { positionAccounting, type Fill } from '../lib/accounting';
-const fill = (kind: Fill['kind'], quantity: number, near: number, ms = 1): Fill => ({kind, quantity: String(quantity), total: (BigInt(near) * 10n ** 24n).toString(), ms});
+const fill = (kind: Fill["kind"], quantity: number, avax: number, ms = 1): Fill => ({kind, quantity: String(quantity), total: (BigInt(avax) * 10n ** 18n).toString(), ms});
 
 test('an unsold buy has no realised loss; open P&L excludes its cost', () => {
   const p = positionAccounting([fill('buy', 10, 2)], 10, 0.3);

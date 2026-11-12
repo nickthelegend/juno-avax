@@ -2,8 +2,11 @@ const { getDefaultConfig } = require("expo/metro-config");
 
 /**
  * Metro for a pnpm workspace. Expo detects the monorepo and watches the
- * workspace root, so `@juno/sdk` (TypeScript source in packages/sdk) is
- * bundled straight from the workspace.
+ * workspace root, so `@juno/sdk` (TypeScript source in sdk/) is bundled
+ * straight from the workspace.
+ *
+ * The QA signer is swapped in for the browser wallet only when the build is
+ * made with EXPO_PUBLIC_QA_SIGNER=1; a production build refuses to import it.
  */
 const path = require("node:path");
 const config = getDefaultConfig(__dirname);

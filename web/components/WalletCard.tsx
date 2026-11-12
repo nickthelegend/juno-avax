@@ -5,22 +5,19 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 import { Tappable } from "./Press";
 import { Button } from "./kit";
 import { juno } from "../lib/api";
-import { displayAddress, explorer, NETWORK_NAME } from "../lib/chain";
+import { displayAddress, explorer, FAUCET_URL, NETWORK_NAME } from "../lib/chain";
 import { useApi } from "../lib/useApi";
 import { useFeedRevision } from "../lib/refresh";
 import { theme } from "../theme";
 
 /**
- * The account itself: its NEAR name, what it holds, and how to fund it.
+ * The account itself: its address, what it holds, and how to fund it.
  *
- * On NEAR the account is the name (mira.juno-k3x9.testnet), so there is no
- * separate profile name to claim. The card shows the NEAR balance and how
- * many posts this account holds, read from testnet, and links to the public
- * testnet faucet for more test NEAR.
+ * The card shows the AVAX balance and how many posts this account holds, read
+ * from Fuji, and links to the Core faucet for more test AVAX.
  *
  * Balances are shown as a dash when the read fails, never as zero.
  */
-const FAUCET_URL = "https://near-faucet.io/";
 
 export function WalletCard({ address }: { address: string }) {
   const revision = useFeedRevision();
@@ -42,15 +39,15 @@ export function WalletCard({ address }: { address: string }) {
         ? "—"
         : value.toFixed(value === 0 ? 2 : value < 1 ? 4 : 2);
 
-  const empty = balances.data?.near !== null && balances.data?.near !== undefined && balances.data.near < 0.05;
+  const empty = balances.data?.avax !== null && balances.data?.avax !== undefined && balances.data.avax < 0.006;
 
   return (
     <View style={styles.card}>
       <View style={styles.head}>
         <Text style={styles.label}>Account · {NETWORK_NAME}</Text>
-        <Tappable onPress={() => void copy()} to={0.95} accessibilityRole="button" accessibilityLabel="Copy account">
+        <Tappable onPress={() => void copy()} to={0.95} accessibilityRole="button" accessibilityLabel="Copy address">
           <View style={styles.copy}>
-            <Text style={styles.copyText}>{copied ? "Copied" : "Copy account"}</Text>
+            <Text style={styles.copyText}>{copied ? "Copied" : "Copy address"}</Text>
           </View>
         </Tappable>
       </View>
@@ -66,8 +63,8 @@ export function WalletCard({ address }: { address: string }) {
 
       <View style={styles.balances}>
         <View style={styles.balance}>
-          <Text style={styles.amount}>{figure(balances.data?.near)}</Text>
-          <Text style={styles.unit}>NEAR</Text>
+          <Text style={styles.amount}>{figure(balances.data?.avax)}</Text>
+          <Text style={styles.unit}>AVAX</Text>
         </View>
         <View style={styles.rule} />
         <View style={styles.balance}>
@@ -77,11 +74,11 @@ export function WalletCard({ address }: { address: string }) {
       </View>
 
       {empty ? (
-        <Text style={styles.hint}>Wallet trades need NEAR for deposits and gas. Email calls need a funded relayer.</Text>
+        <Text style={styles.hint}>A sealed bid escrows 0.005 AVAX, and every call needs a little gas.</Text>
       ) : null}
 
       <Button
-        label="Get test NEAR"
+        label="Get test AVAX"
         variant={empty ? "lime" : "quiet"}
         onPress={() => void Linking.openURL(FAUCET_URL)}
       />

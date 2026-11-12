@@ -38,7 +38,7 @@ export function CreateSheet({
         <Option
           icon={<CoinIcon />}
           title="Post a photo"
-          blurb="It becomes its own NEAR account, opening with a sealed-bid auction."
+          blurb="It becomes its own coin, opening with a one-minute sealed-bid auction."
           accent
           onPress={() => {
             onClose();
@@ -48,7 +48,7 @@ export function CreateSheet({
         <Option
           icon={<ReelIcon />}
           title="Post a dare"
-          blurb="Put a NEAR bond behind a promise. Holders judge the proof."
+          blurb="Put an AVAX bond behind a promise. Holders judge the proof."
           onPress={() => {
             onClose();
             onLaunch("dare");

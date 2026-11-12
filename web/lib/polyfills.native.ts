@@ -1,11 +1,11 @@
 /**
  * Globals Hermes does not have, installed before anything else on iOS and Android.
  *
- * - `crypto.getRandomValues`: the NEAR key pair is drawn from it.
+ * - `crypto.getRandomValues`: sealed-bid salts are drawn from it.
  *   `react-native-get-random-values` must come first, because a module that
  *   reads `crypto` at import time would otherwise capture the unpatched object.
- * - `TextEncoder`/`TextDecoder`: borsh encodes text before Hermes has them.
- * - `Buffer`: near-api-js calls the global `Buffer` while it signs.
+ * - `TextEncoder`/`TextDecoder`: viem encodes text before Hermes has them.
+ * - `Buffer`: a few libraries read the global `Buffer`.
  */
 
 import "react-native-get-random-values";

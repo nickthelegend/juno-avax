@@ -3,8 +3,8 @@
  *
  *   node scripts/qa.mjs http://127.0.0.1:8091 [outDir] [route=name ...]
  *
- * Opens each route at 390×844 and 1440×900, waits for live NEAR reads, and
- * writes <outDir>/near-<name>-<width>.png. Fails (exit 1) when the root is
+ * Opens each route at 390×844 and 1440×900, waits for live Fuji reads, and
+ * writes <outDir>/avax-<name>-<width>.png. Fails (exit 1) when the root is
  * empty, a page error is thrown, or the page scrolls sideways.
  *
  * playwright-core is not a dependency of this repo; point PLAYWRIGHT_CORE at
@@ -36,7 +36,7 @@ for (const [route, name] of routes) {
       text: (document.getElementById("root")?.innerText ?? "").trim().length,
       overflow: document.documentElement.scrollWidth - window.innerWidth,
     }));
-    const file = `${outDir}/near-${name}-${width}.png`;
+    const file = `${outDir}/avax-${name}-${width}.png`;
     await page.screenshot({ path: file });
     const ok = check.text > 0 && errors.length === 0 && check.overflow <= 0;
     if (!ok) failed = true;

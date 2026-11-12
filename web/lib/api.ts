@@ -2,8 +2,9 @@ import {
   accountBalance,
   balanceOf,
   buyQuote,
+  client,
   curveCost,
-  formatNear,
+  formatAvax,
   holders as readHolders,
   market as readMarket,
   posts as readPosts,
@@ -12,27 +13,29 @@ import {
   sellQuote,
   spotPrice,
   trades as readTrades,
-  YOCTO,
+  WEI,
   type Market,
   type Trade,
 } from "@juno/sdk";
+import { decodeEventLog, type Address, type PublicClient } from "viem";
+import { factoryAbi } from "@juno/sdk";
 import { Platform } from "react-native";
 
-import { explorer, FACTORY, RPC_URLS } from "./chain";
+import { explorer, FACTORY, RPC_URLS, sameAddress } from "./chain";
 import { portfolioHistory, positionAccounting } from "./accounting";
 
 /**
- * The Juno client, on NEAR.
+ * The Juno client, on Avalanche Fuji.
  *
- * Every figure here is read from NEAR testnet through `@juno/sdk`: the
- * factory lists the posts, and each post's own contract answers `market`,
- * `trades` and `holders`. There is no Juno server. A transaction is a
- * function call on the post's account (or the factory, for a launch), and
- * `lib/wallet` signs it as a NEP-366 delegate action for the relayer.
+ * Every figure here is read from the Fuji C-Chain through `@juno/sdk`: the
+ * JunoFactory lists the posts, and each post's own contract answers
+ * `market`, `trades` and `holders`. There is no Juno server and no indexer.
+ * A transaction is one contract call on the post (or the factory, for a
+ * launch), signed by the person's own wallet (`lib/wallet`).
  *
- * Amounts: one post token is one whole unit (the contract has 0 decimals,
- * 1,000 per post: 200 in the opening auction, 800 on the curve). NEAR figures
- * are numbers of NEAR, converted from yocto once, here.
+ * Amounts: one post token is one whole unit (the coin has 0 decimals,
+ * 1,000 per post: 200 in the opening auction, 800 on the curve). AVAX
+ * figures are numbers of AVAX, converted from wei once, here.
  */
 
 export class ApiError extends Error {
@@ -55,20 +58,27 @@ export const APP_URL =
 /** Kept for the share link and anything that names the app's own origin. */
 export const API_URL = APP_URL;
 
-function requireFactory(): string {
+function requireFactory(): Address {
   if (!FACTORY) throw new ApiError("Setup required: EXPO_PUBLIC_JUNO_FACTORY", 503);
   return FACTORY;
 }
 
-/** yocto → NEAR, as a number for display. Exact strings stay in the SDK. */
-export function near(yocto: bigint | string | number): number {
-  const value = typeof yocto === "bigint" ? yocto : BigInt(yocto);
-  return Number(formatNear(value, 8));
+/** One shared read client over the public Fuji RPCs (JSON-RPC batched). */
+let reader: PublicClient | null = null;
+export function fujiClient(): PublicClient {
+  reader ??= client(RPC_URLS);
+  return reader;
 }
 
-export function toYocto(amount: number): bigint {
-  const [whole = "0", frac = ""] = amount.toFixed(24).split(".");
-  return BigInt(whole) * YOCTO + BigInt((frac + "0".repeat(24)).slice(0, 24));
+/** wei → AVAX, as a number for display. Exact amounts stay as bigint in the SDK. */
+export function avax(wei: bigint | string | number): number {
+  const value = typeof wei === "bigint" ? wei : BigInt(wei);
+  return Number(formatAvax(value, 12));
+}
+
+export function toWei(amount: number): bigint {
+  const [whole = "0", frac = ""] = amount.toFixed(18).split(".");
+  return BigInt(whole) * WEI + BigInt((frac + "0".repeat(18)).slice(0, 18));
 }
 
 async function guard<T>(promise: Promise<T>): Promise<T> {
@@ -77,9 +87,9 @@ async function guard<T>(promise: Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof ApiError) throw error;
     const text = error instanceof Error ? error.message : String(error);
-    if (/does not exist|UNKNOWN_ACCOUNT/i.test(text)) throw new ApiError("Not found on NEAR testnet", 404);
-    if (/429|rate/i.test(text)) throw new ApiError("NEAR testnet RPC is rate limiting. Try again in a moment.", 429);
-    if (/fetch|network|Failed/i.test(text)) throw new ApiError("NEAR testnet can't be reached right now. Check your connection and try again.", 0);
+    if (/returned no data|is not a contract|does not have the function|reverted/i.test(text)) throw new ApiError("Not a Juno post on Avalanche Fuji", 404);
+    if (/429|rate/i.test(text)) throw new ApiError("The Fuji RPC is rate limiting. Try again in a moment.", 429);
+    if (/fetch|network|Failed|timed out|HTTP request/i.test(text)) throw new ApiError("Avalanche Fuji can't be reached right now. Check your connection and try again.", 0);
     throw new ApiError(text.slice(0, 200), 500);
   }
 }
@@ -97,18 +107,20 @@ export type CurveState = {
   graduated: boolean;
 };
 
-export type QuoteAsset = { address: null; symbol: "NEAR"; decimals: 24 };
+export type QuoteAsset = { address: null; symbol: "AVAX"; decimals: 18 };
 
-/** The NEAR-only state of a post: its opening auction, floor and dare. */
-export type NearState = {
+/** A post's on-chain state beyond price: its opening auction, floor and dare. */
+export type OnchainState = {
   phase: Market["phase"];
+  openedMs: number;
   commitEndMs: number;
   revealEndMs: number;
+  dareEndMs: number;
   sealedBids: number;
   revealedBids: number;
-  /** NEAR per token the auction cleared at; 0 before settlement. */
+  /** AVAX per token the auction cleared at; 0 before settlement. */
   clearingPrice: number;
-  /** NEAR held for holders, and what each token can redeem against it. */
+  /** AVAX held for holders, and what each token can redeem against it. */
   floorVault: number;
   floorPerToken: number;
   totalSupply: number;
@@ -119,12 +131,15 @@ export type NearState = {
   dareBond: number;
   proof: string;
   dareFinalized: boolean;
-  /** Exact yocto strings, for quotes. */
+  dareAccepted: boolean;
+  votesYes: number;
+  votesNo: number;
+  /** Exact wei strings, for quotes. */
   raw: Market;
 };
 
 export type Coin = {
-  /** The post's NEAR account, which is also its token contract. */
+  /** The post's contract, which is also its ERC-20 coin. */
   address: string;
   format: "post" | "reel";
   name: string;
@@ -136,9 +151,9 @@ export type Coin = {
   pool: string;
   chainId: number;
   quote: QuoteAsset;
-  /** Graduation keeps liquidity in the post account's escrow; this is its explorer page. */
+  /** Graduation moves everything raised into the post's floor; this is its explorer page. */
   graduatedPool?: string | null;
-  /** No USD feed: prices are in NEAR. Always null. */
+  /** No USD feed: prices are in AVAX. Always null. */
   quoteUsdRate: number | null;
   marketCap: number;
   marketCapQuote?: number;
@@ -151,7 +166,7 @@ export type Coin = {
   creatorRewards: number;
   creatorFeesQuote?: number;
   holders: number | null;
-  /** NEAR per token (named for the shape the screens were written against). */
+  /** AVAX per token (named for the shape the screens were written against). */
   priceUsd: number;
   priceQuote?: number;
   graduation?: { txHash: string | null; timestamp: string } | null;
@@ -162,7 +177,7 @@ export type Coin = {
   likes?: number;
   commentCount?: number;
   viewerLiked?: boolean | null;
-  near: NearState;
+  onchain: OnchainState;
 };
 
 export type Activity = {
@@ -261,26 +276,27 @@ export type DepthPoint = {
   allowed?: boolean;
 };
 
-/** One NEAR function call, for the wallet to sign and the relayer to submit. */
+/** One contract call, for the wallet to sign and send. */
 export type TxStep = {
   label: string;
-  receiverId: string;
-  methodName: string;
-  args: Record<string, unknown>;
-  /** yocto, decimal string. */
-  deposit: string;
-  /** gas units, decimal string. */
-  gas: string;
+  to: Address;
+  abi: "post" | "factory";
+  functionName: string;
+  args: readonly unknown[];
+  /** wei, decimal string. */
+  value: string;
+  /** Worked out just before this step is signed (a buy after a settle in the same flow). */
+  resolveValue?: () => Promise<bigint>;
 };
 
 export type SwapQuote = {
   side: "buy" | "sell" | "redeem";
-  /** Tokens for a buy, NEAR for a sell or redeem. */
+  /** Tokens for a buy, AVAX for a sell or redeem. */
   amountOut: number;
-  /** NEAR a buy costs (fees and floor share included). */
+  /** AVAX a buy costs (fees and floor share included). */
   amountIn: number;
   fee: number;
-  /** NEAR a buy adds to the redeemable floor (20% of the curve price). */
+  /** AVAX a buy adds to the redeemable floor (20% of the base price). */
   toFloor: number;
   priceImpact: number;
   /** Paid from the floor rather than the curve (the floor is higher). */
@@ -290,7 +306,7 @@ export type SwapQuote = {
 export type SwapBuild = { steps: TxStep[]; quote: SwapQuote };
 
 export type Balances = {
-  near: number | null;
+  avax: number | null;
   /** One post token's balance, when asked for with `token`. */
   token: number | null;
 };
@@ -308,16 +324,15 @@ export type Trader = {
   followers: number;
 };
 
-const TGAS = 10n ** 12n;
 
 /* ------------------------------------------------------------------ */
 /* Reading a post                                                      */
 /* ------------------------------------------------------------------ */
 
-type Raw = { account: string; market: Market; trades: Trade[]; holders: Array<[string, string]> };
+type Raw = { account: Address; market: Market; trades: Trade[]; holders: Array<[string, string]> };
 
 const ART_EXT = /\.(mp4|webm|mov)(\?|$)/i;
-const FULL_CURVE = near(curveCost(0n, 800n));
+const FULL_CURVE = avax(curveCost(0n, 800n));
 
 function titleCase(slug: string): string {
   return slug
@@ -327,14 +342,14 @@ function titleCase(slug: string): string {
     .join(" ");
 }
 
-/** Gross NEAR per token of one fill: the price the curve (or floor) charged, before fee and floor share. */
+/** Gross AVAX per token of one fill: the price the curve (or floor) charged, before fee and floor share. */
 function fillPrice(trade: Trade): number | null {
   const quantity = Number(trade.quantity);
   if (!quantity) return null;
   const total = BigInt(trade.total);
-  if (trade.kind === "auction") return near(total) / quantity;
-  if (trade.kind === "buy") return near((total * 100n) / 121n) / quantity;
-  if (trade.kind === "sell") return near((total * 100n) / 99n) / quantity;
+  if (trade.kind === "auction") return avax(total) / quantity;
+  if (trade.kind === "buy") return avax((total * 100n) / 121n) / quantity;
+  if (trade.kind === "sell") return avax((total * 100n) / 99n) / quantity;
   return null;
 }
 
@@ -343,12 +358,12 @@ function priceNow(m: Market): number {
   const supply = BigInt(m.total_supply);
   const curve = spotPrice(BigInt(m.curve_sold));
   const floor = BigInt(m.floor_per_token);
-  if (m.phase === "commit" || m.phase === "reveal" || m.phase === "settle") return supply > 0n ? near(floor) : near(spotPrice(0n));
-  return near(curve > floor ? curve : floor);
+  if (m.phase === "commit" || m.phase === "reveal" || m.phase === "settle") return supply > 0n ? avax(floor) : avax(spotPrice(0n));
+  return avax(curve > floor ? curve : floor);
 }
 
 function toCoin({ account, market: m, trades, holders }: Raw): Coin {
-  const createdMs = m.commit_end_ms - 60_000;
+  const createdMs = m.opened_ms;
   const price = priceNow(m);
   const supply = Number(m.total_supply);
   const history = trades
@@ -357,16 +372,16 @@ function toCoin({ account, market: m, trades, holders }: Raw): Coin {
     .map(({ trade, price: p }) => ({
       t: new Date(trade.ms).toISOString(),
       price: p,
-      volume: near(trade.total),
+      volume: avax(trade.total),
       side: (trade.kind === "sell" ? "sell" : "buy") as "buy" | "sell",
     }));
   const dayAgo = Date.now() - 86_400_000;
   const reference = history.find((point) => Date.parse(point.t) >= dayAgo) ?? history[0];
   const change = reference && reference.price > 0 && history.length > 0 ? ((price - reference.price) / reference.price) * 100 : null;
-  const volume = trades.filter((t) => t.kind !== "redeem").reduce((sum, t) => sum + near(t.total), 0);
+  const volume = trades.filter((t) => t.kind !== "redeem").reduce((sum, t) => sum + avax(t.total), 0);
   const volume24 = trades
     .filter((t) => t.kind !== "redeem" && t.ms >= dayAgo)
-    .reduce((sum, t) => sum + near(t.total), 0);
+    .reduce((sum, t) => sum + avax(t.total), 0);
   const video = ART_EXT.test(m.media_url);
   const marketCap = price * supply;
   const graduatedAt = m.graduated ? [...trades].reverse().find((t) => t.kind === "buy" && t.sold_after === "800") : undefined;
@@ -381,20 +396,20 @@ function toCoin({ account, market: m, trades, holders }: Raw): Coin {
     creator: { handle: m.creator, displayName: m.creator, avatarUrl: "", wallet: m.creator },
     createdAt: new Date(createdMs).toISOString(),
     pool: account,
-    chainId: 0,
-    quote: { address: null, symbol: "NEAR", decimals: 24 },
+    chainId: 43113,
+    quote: { address: null, symbol: "AVAX", decimals: 18 },
     graduatedPool: m.graduated ? account : null,
     quoteUsdRate: null,
     marketCap,
     marketCapQuote: marketCap,
-    marketCapCurrency: "NEAR",
+    marketCapCurrency: "AVAX",
     marketCapChangePct: change === null || !Number.isFinite(change) ? null : change,
     volume24h: volume24,
     volume24hQuote: volume24,
     totalVolume: volume,
     totalVolumeQuote: volume,
-    creatorRewards: near(m.creator_earnings),
-    creatorFeesQuote: near(m.creator_earnings),
+    creatorRewards: avax(m.creator_earnings),
+    creatorFeesQuote: avax(m.creator_earnings),
     holders: holders.length,
     priceUsd: price,
     priceQuote: price,
@@ -403,30 +418,35 @@ function toCoin({ account, market: m, trades, holders }: Raw): Coin {
     priceHistoryPartial: trades.length >= 120,
     curve: {
       progress: Number(m.curve_sold) / 800,
-      raisedUsd: near(m.curve_reserve),
+      raisedUsd: avax(m.curve_reserve),
       thresholdUsd: FULL_CURVE,
-      raisedQuote: near(m.curve_reserve),
+      raisedQuote: avax(m.curve_reserve),
       thresholdQuote: FULL_CURVE,
       graduated: m.graduated,
     },
     curvePreset: "sealed-bid",
-    near: {
+    onchain: {
       phase: m.phase,
+      openedMs: m.opened_ms,
       commitEndMs: m.commit_end_ms,
       revealEndMs: m.reveal_end_ms,
+      dareEndMs: m.dare_end_ms,
       sealedBids: m.sealed_bid_count,
       revealedBids: m.revealed_bid_count,
-      clearingPrice: near(m.clearing_price),
-      floorVault: near(m.floor_vault),
-      floorPerToken: near(m.floor_per_token),
+      clearingPrice: avax(m.clearing_price),
+      floorVault: avax(m.floor_vault),
+      floorPerToken: avax(m.floor_per_token),
       totalSupply: supply,
       curveSold: Number(m.curve_sold),
-      curveReserve: near(m.curve_reserve),
-      graduationEscrow: near(m.graduation_escrow),
+      curveReserve: avax(m.curve_reserve),
+      graduationEscrow: avax(m.graduation_escrow),
       dare: m.dare,
-      dareBond: near(m.dare_bond),
+      dareBond: avax(m.dare_bond),
       proof: m.proof,
       dareFinalized: m.dare_finalized,
+      dareAccepted: m.dare_accepted,
+      votesYes: Number(m.votes_yes),
+      votesNo: Number(m.votes_no),
       raw: m,
     },
   };
@@ -434,31 +454,30 @@ function toCoin({ account, market: m, trades, holders }: Raw): Coin {
 
 /**
  * A read that a public RPC dropped (a throttled burst, a reset connection) is
- * worth two quiet retries before the screen says it failed. Only reads.
+ * worth two quiet retries before the screen says it failed. Only reads. The
+ * viem transport already falls back across RPC_URLS.
  */
-let preferred = 0;
-async function retry<T>(read: (endpoint: string) => Promise<T>): Promise<T> {
+async function retry<T>(read: (c: PublicClient) => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
-    const index = (preferred + attempt) % RPC_URLS.length;
     try {
-      const value = await read(RPC_URLS[index]!);
-      preferred = index;
-      return value;
+      return await read(fujiClient());
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      if (attempt >= RPC_URLS.length + 1 || /does not exist|UNKNOWN_ACCOUNT|ERR_/i.test(text)) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+      if (attempt >= 2 || /returned no data|reverted|is not a contract/i.test(text)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
     }
   }
 }
 
 async function readOne(account: string): Promise<Raw> {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(account)) throw new ApiError("Not a Juno post on Avalanche Fuji", 404);
+  const address = account as Address;
   const [m, t, h] = await Promise.all([
-    retry((rpc) => readMarket(account, rpc)),
-    retry((rpc) => readTrades(account, rpc)),
-    retry((rpc) => readHolders(account, rpc)),
+    retry((c) => readMarket(c, address)),
+    retry((c) => readTrades(c, address)),
+    retry((c) => readHolders(c, address)),
   ]);
-  return { account, market: m, trades: t, holders: h };
+  return { account: address, market: m, trades: t, holders: h };
 }
 
 /** Every post, read once and shared for a few seconds between screens. */
@@ -467,7 +486,7 @@ async function readAll(fresh = false): Promise<Raw[]> {
   if (!fresh && shared && Date.now() - shared.at < 15_000) return shared.value;
   const value = (async () => {
     const factory = requireFactory();
-    const accounts = await guard(retry((rpc) => readPosts(factory, rpc)));
+    const accounts = await guard(retry((c) => readPosts(c, factory)));
     // Portfolio and rankings must not turn failed market reads into empty wallets.
     return guard(Promise.all(accounts.map((account) => readOne(account))));
   })();
@@ -490,8 +509,8 @@ function activityOf(raw: Raw): Activity[] {
     actor: { handle: trade.account, avatarUrl: "" },
     wallet: trade.account,
     amount: Number(trade.quantity),
-    valueUsd: near(trade.total),
-    valueQuote: near(trade.total),
+    valueUsd: avax(trade.total),
+    valueQuote: avax(trade.total),
     timestamp: new Date(trade.ms).toISOString(),
   }));
 }
@@ -513,7 +532,7 @@ function crowdOf(raw: Raw, coin: Coin): Crowd | null {
   const first = buys[0];
   const firstPrice = first ? fillPrice(first) : null;
   return {
-    currency: "NEAR",
+    currency: "AVAX",
     quoteUsdRate: 0,
     traders: traders.size,
     holdersStill: raw.holders.filter(([wallet]) => traders.has(wallet)).length,
@@ -526,7 +545,7 @@ function crowdOf(raw: Raw, coin: Coin): Crowd | null {
             multiple: coin.priceQuote && firstPrice > 0 ? coin.priceQuote / firstPrice : null,
           }
         : null,
-    biggestBuy: buys.length ? Math.max(...buys.map((t) => near(t.total))) : null,
+    biggestBuy: buys.length ? Math.max(...buys.map((t) => avax(t.total))) : null,
     partial: raw.trades.length >= 120,
   };
 }
@@ -536,7 +555,7 @@ function crowdOf(raw: Raw, coin: Coin): Crowd | null {
 /* ------------------------------------------------------------------ */
 
 function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number): SwapQuote {
-  const m = coin.near.raw;
+  const m = coin.onchain.raw;
   const q = BigInt(Math.floor(quantity));
   const sold = BigInt(m.curve_sold);
   const vault = BigInt(m.floor_vault);
@@ -546,13 +565,13 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
     const total = buyQuote(sold, q, vault, supply);
     const gross = (total * 100n) / 121n;
     const curveGross = curveCost(sold, q);
-    const average = near(gross) / quantity;
+    const average = avax(gross) / quantity;
     return {
       side,
       amountOut: quantity,
-      amountIn: near(total),
-      fee: near(gross / 100n),
-      toFloor: near(gross / 5n),
+      amountIn: avax(total),
+      fee: avax(gross / 100n),
+      toFloor: avax(gross / 5n),
       priceImpact: spot > 0 ? Math.max(0, average / spot - 1) : 0,
       fromFloor: gross > curveGross,
     };
@@ -561,19 +580,19 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
     const out = sellQuote(sold, q, vault, supply);
     const curveOut = curveCost(sold - q, q, false);
     const gross = (out * 100n) / 99n;
-    const average = near(gross) / quantity;
+    const average = avax(gross) / quantity;
     return {
       side,
-      amountOut: near(out),
+      amountOut: avax(out),
       amountIn: 0,
-      fee: near(gross / 100n),
+      fee: avax(gross / 100n),
       toFloor: 0,
       priceImpact: spot > 0 ? Math.max(0, 1 - average / spot) : 0,
       fromFloor: gross > curveOut,
     };
   }
   const out = redeemQuote(vault, supply, q);
-  return { side, amountOut: near(out), amountIn: 0, fee: near(out / 99n), toFloor: 0, priceImpact: 0, fromFloor: true };
+  return { side, amountOut: avax(out), amountIn: 0, fee: avax(out / 99n), toFloor: 0, priceImpact: 0, fromFloor: true };
 }
 
 /* ------------------------------------------------------------------ */
@@ -581,7 +600,7 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
 /* ------------------------------------------------------------------ */
 
 /**
- * Likes and follows have no contract behind them on NEAR, so they are kept on
+ * Likes and follows have no contract behind them, so they are kept on
  * this device only and never shown as anyone else's. A count is the viewer's
  * own like and nothing more.
  */
@@ -617,9 +636,8 @@ function localSet(key: string): Set<string> {
 export const juno = {
   /** Every post on the factory, as markets. `missing` counts posts whose read failed. */
   coins: async (_limit?: number, opts: { viewer?: string | null; fresh?: boolean } = {}) => {
-    const factory = requireFactory();
-    const accounts = await guard(retry((rpc) => readPosts(factory, rpc)));
     const raws = await readAll(opts.fresh);
+    const accounts = raws.map((raw) => raw.account);
     const liked = localSet(`likes:${opts.viewer ?? "anon"}`);
     const coins = raws.map((raw) => {
       const coin = toCoin(raw);
@@ -658,10 +676,10 @@ export const juno = {
           timestamp: new Date(trade.ms).toISOString(),
           side: (trade.kind === "sell" || trade.kind === "redeem" ? "sell" : "buy") as "buy" | "sell",
           amount: Number(trade.quantity),
-          valueUsd: near(trade.total),
+          valueUsd: avax(trade.total),
           price: fillPrice(trade) ?? 0,
           priceNow: coin.priceQuote ?? null,
-          currency: "NEAR",
+          currency: "AVAX",
           note: null,
           actor: { wallet: trade.account, handle: trade.account, avatarUrl: "" },
           coin: { address: coin.address, name: coin.name, symbol: coin.symbol, mediaUrl: coin.media.url, mediaKind: coin.media.kind, posterUrl: null },
@@ -675,7 +693,7 @@ export const juno = {
   /** What a buy or sell of each size does to the price, computed from the same curve maths as the contract. */
   depth: async (mint: string, side: "buy" | "sell" = "buy", impact?: number) => {
     const { coin } = await juno.coin(mint);
-    const room = side === "buy" ? 800 - coin.near.curveSold : coin.near.curveSold;
+    const room = side === "buy" ? 800 - coin.onchain.curveSold : coin.onchain.curveSold;
     const sizes = [1, 5, 10, 25, 50, 100, 200, 400, 800].filter((n) => n <= room);
     const points: DepthPoint[] = sizes.map((n) => {
       const q = quoteFor(coin, side, n);
@@ -686,7 +704,7 @@ export const juno = {
         priceImpact: q.priceImpact,
         curveImpact: q.priceImpact,
         fee: q.fee,
-        allowed: coin.near.phase === "curve",
+        allowed: coin.onchain.phase === "curve",
       };
     });
     const budget = impact ?? 0.01;
@@ -707,8 +725,8 @@ export const juno = {
     const raws = await readAll();
     const positions: Position[] = [];
     for (const raw of raws) {
-      const held = raw.holders.find(([account]) => account === wallet);
-      const mine = raw.trades.filter((t) => t.account === wallet);
+      const held = raw.holders.find(([account]) => sameAddress(account, wallet));
+      const mine = raw.trades.filter((t) => sameAddress(t.account, wallet));
       if (!held && mine.length === 0) continue;
       const coin = toCoin(raw);
       const balance = held ? Number(held[1]) : 0;
@@ -730,10 +748,10 @@ export const juno = {
         unrealisedPnl: accounting.unrealised,
         unrealisedPnlPct: accounting.unrealisedPct,
         realisedPnl: accounting.realised,
-        currency: "NEAR",
+        currency: "AVAX",
         graduated: coin.curve.graduated,
         trades: mine.map((t) => ({ t: new Date(t.ms).toISOString(), side: t.kind === "sell" || t.kind === "redeem" ? "sell" : "buy", base: Number(t.quantity), price: fillPrice(t) ?? 0 })),
-        floorValue: near(redeemQuote(BigInt(raw.market.floor_vault), BigInt(raw.market.total_supply), BigInt(balance))),
+        floorValue: avax(redeemQuote(BigInt(raw.market.floor_vault), BigInt(raw.market.total_supply), BigInt(balance))),
         partial: raw.trades.length >= 120,
       });
     }
@@ -750,7 +768,7 @@ export const juno = {
       totalValue,
       totalPnl,
       totalPnlPct: cost > 0 && totalPnl !== null ? totalPnl / cost : null,
-      currency: "NEAR",
+      currency: "AVAX",
       partial: positions.some((p) => p.partial),
       history: positions.some((p) => p.realisedPnl === null || p.partial) ? [] : [
         ...portfolioHistory(raws.flatMap((raw) => raw.trades.map((trade) => ({
@@ -762,7 +780,7 @@ export const juno = {
     };
   },
 
-  /** Traders ranked by realised NEAR profit, with open cost shown separately. Gas is excluded. */
+  /** Traders ranked by realised AVAX profit, with open cost shown separately. Gas is excluded. */
   leaderboard: async (limit = 20) => {
     const raws = await readAll();
     const creators = new Set(raws.map((raw) => raw.market.creator));
@@ -772,8 +790,8 @@ export const juno = {
       const coin = toCoin(raw);
       const accounts = new Set([...raw.trades.map((t) => t.account), ...raw.holders.map(([id]) => id)]);
       for (const account of accounts) {
-        const mine = raw.trades.filter((t) => t.account === account);
-        const balance = Number(raw.holders.find(([id]) => id === account)?.[1] ?? 0);
+        const mine = raw.trades.filter((t) => sameAddress(t.account, account));
+        const balance = Number(raw.holders.find(([id]) => sameAddress(id, account))?.[1] ?? 0);
         const accounting = positionAccounting(mine, balance, coin.priceQuote ?? 0, raw.trades.length >= 120);
         const row = rows.get(account) ?? {
           wallet: account, realised: 0, unrealised: 0, trades: 0, coins: 0, winRate: null, bestExit: null, holding: 0,
@@ -793,45 +811,53 @@ export const juno = {
       return { ...row, winRate: row.realised !== null && closed.length ? closed.filter((pnl) => pnl > 0).length / closed.length : null,
         bestExit: row.realised !== null && closed.length ? Math.max(...closed) : null };
     }).sort((a, b) => (b.realised ?? -Infinity) - (a.realised ?? -Infinity)).slice(0, limit);
-    return { traders, currency: "NEAR", partial: raws.some((raw) => raw.trades.length >= 120), poolsRead: raws.length };
+    return { traders, currency: "AVAX", partial: raws.some((raw) => raw.trades.length >= 120), poolsRead: raws.length };
   },
 
-  /** A NEAR balance, and optionally one post token's. */
+  /** An AVAX balance, and optionally one post coin's. */
   balances: async (wallet: string, token?: string | null): Promise<Balances> => {
-    const [nearBalance, held] = await Promise.all([
-      retry((rpc) => accountBalance(wallet, rpc)).then(near).catch(() => null),
-      token ? retry((rpc) => balanceOf(token, wallet, rpc)).then(Number).catch(() => null) : Promise.resolve(null),
+    const [native, held] = await Promise.all([
+      retry((c) => accountBalance(c, wallet as Address)).then(avax).catch(() => null),
+      token ? retry((c) => balanceOf(c, token as Address, wallet as Address)).then(Number).catch(() => null) : Promise.resolve(null),
     ]);
-    return { near: nearBalance, token: held };
+    return { avax: native, token: held };
   },
 
-  /** A buy, sell or floor redemption, quoted against the post's live state and built as one function call. */
+  /**
+   * A buy, sell or floor redemption, quoted against the post's live state and
+   * built as contract calls. A buy sends 2% over the quote as its ceiling (the
+   * contract refunds whatever it does not use); a sell or redemption names a
+   * minimum 2% under its quote. If the auction is over but unsettled, the
+   * flow settles it first and prices the buy afterwards.
+   */
   buildSwap: async (input: { curve: string; side: "buy" | "sell" | "redeem"; amountOut: number }): Promise<SwapBuild> => {
     const { coin } = await juno.coin(input.curve);
     const quantity = Math.floor(input.amountOut);
+    const n = coin.onchain;
+    const post = coin.address as Address;
     if (!(quantity > 0)) throw new ApiError("Enter a whole number of tokens", 400);
-    if (input.side !== "redeem" && coin.near.phase !== "curve") {
-      throw new ApiError(coin.near.phase === "graduated" ? "This post graduated: its curve is closed. You can still redeem against the floor." : "The curve opens when the sealed-bid auction settles.", 409);
+    if (n.phase === "commit" || n.phase === "reveal") throw new ApiError("The curve opens when the sealed-bid auction settles.", 409);
+    if (input.side !== "redeem" && n.phase === "graduated") {
+      throw new ApiError("This post graduated: its curve is closed. You can still redeem against the floor.", 409);
     }
-    if (input.side === "buy" && quantity > 800 - coin.near.curveSold) throw new ApiError(`Only ${800 - coin.near.curveSold} tokens are left on the curve`, 400);
-    if (input.side === "sell" && quantity > coin.near.curveSold) throw new ApiError(`At most ${coin.near.curveSold} can be sold back to the curve`, 400);
+    if (input.side === "buy" && quantity > 800 - n.curveSold) throw new ApiError(`Only ${800 - n.curveSold} tokens are left on the curve`, 400);
+    if (input.side === "sell" && quantity > n.curveSold) throw new ApiError(`At most ${n.curveSold} can be sold back to the curve`, 400);
     const quote = quoteFor(coin, input.side, quantity);
-    let deposit = 0n;
-    if (input.side === "buy") deposit = await retry((rpc) => quoteBuy(coin.address, BigInt(quantity), rpc));
-    const label = input.side === "buy" ? "Buy" : input.side === "sell" ? "Sell" : "Redeem";
-    return {
-      quote,
-      steps: [
-        {
-          label,
-          receiverId: coin.address,
-          methodName: input.side,
-          args: { quantity: String(quantity) },
-          deposit: deposit.toString(),
-          gas: (input.side === "buy" ? 100n * TGAS : 80n * TGAS).toString(),
-        },
-      ],
-    };
+    const q = BigInt(quantity);
+    const steps: TxStep[] = [];
+    if (n.phase === "settle") steps.push(juno.call(post, "settle", "Settle the auction"));
+    if (input.side === "buy") {
+      const ceiling = async () => ((await retry((c) => quoteBuy(c, post, q))) * 102n) / 100n;
+      const value = n.phase === "settle" ? 0n : await ceiling();
+      steps.push({ ...juno.call(post, "buy", "Buy", [q], value), resolveValue: n.phase === "settle" ? ceiling : undefined });
+    } else {
+      const m = n.raw;
+      const out = input.side === "sell"
+        ? sellQuote(BigInt(m.curve_sold), q, BigInt(m.floor_vault), BigInt(m.total_supply))
+        : redeemQuote(BigInt(m.floor_vault), BigInt(m.total_supply), q);
+      steps.push(juno.call(post, input.side, input.side === "sell" ? "Sell" : "Redeem", [q, (out * 98n) / 100n]));
+    }
+    return { quote, steps };
   },
 
   /** Quote only, for a signed-out visitor or while typing. */
@@ -840,37 +866,50 @@ export const juno = {
     return quoteFor(coin, input.side, Math.floor(input.amountOut));
   },
 
-  /** Launch a post: a named sub-account of the factory with its own market. */
-  buildLaunch: (input: { slug: string; caption: string; mediaUrl: string; dare: string; dareBondNear: number }): { steps: TxStep[]; account: string } => {
+  /** Launch a post: the factory deploys its own coin contract. Any bond rides along as AVAX. */
+  buildLaunch: (input: { slug: string; caption: string; mediaUrl: string; dare: string; dareBondAvax: number }): { steps: TxStep[] } => {
     const factory = requireFactory();
-    const bond = toYocto(input.dareBondNear);
+    const bond = toWei(input.dareBondAvax);
     return {
-      account: `${input.slug}.${factory}`,
       steps: [
         {
           label: "Launch",
-          receiverId: factory,
-          methodName: "create_post",
-          args: { slug: input.slug, caption: input.caption, media_url: input.mediaUrl, dare: input.dare, dare_bond: bond.toString() },
-          deposit: (3n * YOCTO + bond).toString(),
-          gas: (150n * TGAS).toString(),
+          to: factory,
+          abi: "factory",
+          functionName: "createPost",
+          args: [input.slug, input.caption, input.mediaUrl, input.dare],
+          value: bond.toString(),
         },
       ],
     };
   },
 
-  /** A function call on a post with no deposit (settle, reveal, refunds, earnings, dare votes). */
-  call: (receiverId: string, methodName: string, label: string, args: Record<string, unknown> = {}, deposit = 0n, gas = 120n * TGAS): TxStep => ({
+  /** The post a launch transaction created, read from its PostCreated event. */
+  postFromLaunch: async (hash: string): Promise<Address> => {
+    const receipt = await retry((c) => c.getTransactionReceipt({ hash: hash as `0x${string}` }));
+    for (const log of receipt.logs) {
+      try {
+        const event = decodeEventLog({ abi: factoryAbi, data: log.data, topics: log.topics });
+        if (event.eventName === "PostCreated") return event.args.post;
+      } catch {
+        /* another contract's event */
+      }
+    }
+    throw new ApiError("The launch confirmed but its post could not be found in the receipt.", 500);
+  },
+
+  /** One call on a post (settle, reveal, refunds, earnings, dare steps). */
+  call: (to: Address, functionName: string, label: string, args: readonly unknown[] = [], value = 0n): TxStep => ({
     label,
-    receiverId,
-    methodName,
+    to,
+    abi: "post",
+    functionName,
     args,
-    deposit: deposit.toString(),
-    gas: gas.toString(),
+    value: value.toString(),
   }),
 
-  /** The creator's fee share. */
-  buildClaim: (input: { curve: string }) => ({ steps: [juno.call(input.curve, "withdraw_earnings", "Claim")] }),
+  /** The creator's fee share (and a returned dare bond). */
+  buildClaim: (input: { curve: string }) => ({ steps: [juno.call(input.curve as Address, "withdrawEarnings", "Claim")] }),
 
   /* Device-local social state (see above). */
   likes: (coins: string[], viewer?: string | null) => {
@@ -920,4 +959,4 @@ export const juno = {
   explorer: (kind: "tx" | "address" | "token", id: string) => explorer(kind, id),
 };
 
-export { formatNear };
+export { formatAvax };

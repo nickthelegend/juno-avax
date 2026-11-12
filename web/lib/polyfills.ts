@@ -1,7 +1,6 @@
 /**
- * near-api-js reads the global `Buffer` while it signs, and the browser has
- * none. Installed at the very top of the root layout, before anything that
- * imports the NEAR client.
+ * A few libraries still read a global `Buffer`, and the browser has none.
+ * Installed at the very top of the root layout, before anything else loads.
  */
 import { Buffer } from "buffer";
 

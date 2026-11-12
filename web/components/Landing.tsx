@@ -3,6 +3,8 @@ import React, { useEffect, useMemo } from "react";
 
 import type { Coin } from "../lib/api";
 import { explorer, FACTORY, NETWORK_NAME } from "../lib/chain";
+import { DEPLOYMENT } from "../lib/deployment";
+import { useBlockCadence } from "../lib/cadence";
 import { loadMarkets } from "../lib/markets";
 import { useApi } from "../lib/useApi";
 import { LANDING_CSS } from "./landing-css";
@@ -15,12 +17,12 @@ import { LANDING_CSS } from "./landing-css";
  * 375px, and none of the app's screens are reused or restyled here. Native
  * builds never render it; `app/index.tsx` keeps the phone onboarding there.
  *
- * Every number on it is read from the factory on NEAR testnet through the
- * same `loadMarkets()` the feed uses. Until the read lands the figures say
- * "Reading testnet", and a failed read says so in words.
+ * Every number on it is read from the factory on Avalanche Fuji through the
+ * same `loadMarkets()` the feed uses, plus the chain's own block clock. Until
+ * a read lands the figures say "Reading Fuji", and a failed read says so.
  */
 
-const DEPLOY_TX = "HvSXP63tQhyZSPujjj3dVN1eZPFqLXRxTGD19qHMpzxx";
+const DEPLOY_TX = DEPLOYMENT.factoryTx;
 const FONTS = "https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Urbanist:wght@400;500;600;700;800;900&display=swap";
 
 /** The seeded posts' own media; the stickers are those posts. */
@@ -49,7 +51,7 @@ function torn(seed: number, depth = 2.6, steps = 16): string {
 }
 
 /** 0.05312 → "0.0531"; 0.0000636 → "0.0000636". Four significant figures, never rounded to zero. */
-function nearFigure(n: number | null | undefined): string {
+function avaxFigure(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "—";
   if (n === 0) return "0";
   if (Math.abs(n) >= 1000) return Math.round(n).toLocaleString("en-US");
@@ -75,7 +77,7 @@ function PhotoCard({ src, coin, seed, className, tape }: { src: string; coin?: C
       <div className="jl-card">
         <div className="jl-paper" style={{ clipPath: clip }}>
           <img src={src} alt="" decoding="async" draggable={false} />
-          <span className="jl-cap">{coin ? <><b>${coin.symbol}</b><i>{nearFigure(coin.marketCapQuote ?? coin.marketCap)} NEAR</i></> : <b className="jl-cap-wait">&nbsp;</b>}</span>
+          <span className="jl-cap">{coin ? <><b>${coin.symbol}</b><i>{avaxFigure(coin.marketCapQuote ?? coin.marketCap)} AVAX</i></> : <b className="jl-cap-wait">&nbsp;</b>}</span>
         </div>
       </div>
       {tape ? <span className="jl-tape" /> : null}
@@ -151,13 +153,14 @@ export default function Landing() {
   const failed = !!markets.error && !posts;
   const stat = (value: string | number | undefined) => (failed ? "—" : value === undefined ? "…" : String(value));
   const holders = posts?.reduce((n, c) => n + (c.holders ?? 0), 0);
-  const floors = posts?.reduce((n, c) => n + c.near.floorVault, 0);
-  const bids = posts?.reduce((n, c) => n + c.near.sealedBids, 0);
+  const floors = posts?.reduce((n, c) => n + c.onchain.floorVault, 0);
+  const bids = posts?.reduce((n, c) => n + c.onchain.sealedBids, 0);
   const graduated = posts?.filter((c) => c.curve.graduated).length;
-  const settled = posts?.filter((c) => c.near.clearingPrice > 0).sort((a, b) => b.near.sealedBids - a.near.sealedBids)[0];
-  const deepest = posts ? [...posts].sort((a, b) => b.near.floorVault - a.near.floorVault)[0] : undefined;
+  const settled = posts?.filter((c) => c.onchain.clearingPrice > 0).sort((a, b) => b.onchain.sealedBids - a.onchain.sealedBids)[0];
+  const deepest = posts ? [...posts].sort((a, b) => b.onchain.floorVault - a.onchain.floorVault)[0] : undefined;
   const sprout = byArt(posts, ART.sprout);
   const tag = dayTag(posts?.[0]?.createdAt);
+  const cadence = useBlockCadence();
 
   return (
     <div className="jl" id="top">
@@ -192,10 +195,10 @@ export default function Landing() {
             <a href="/social" onClick={go("/(tabs)/social")} className="jl-pill jl-pill-lime jl-pill-xl">Open Juno</a>
             <p className="jl-sub">
               {posts
-                ? <>Live on {NETWORK_NAME}. {posts.length} posts trading, each its own NEAR account, with test NEAR only.</>
+                ? <>Live on {NETWORK_NAME}. {posts.length} posts trading, each its own coin, with test AVAX only.</>
                 : failed
-                  ? <>Live on {NETWORK_NAME}, with test NEAR only.</>
-                  : <>A social feed on {NETWORK_NAME}, with test NEAR only.</>}
+                  ? <>Live on {NETWORK_NAME}, with test AVAX only.</>
+                  : <>A social feed on {NETWORK_NAME}, with test AVAX only.</>}
             </p>
           </div>
         </section>
@@ -203,7 +206,7 @@ export default function Landing() {
         <section className="jl-live" aria-labelledby="jl-live-title">
           <div className="jl-wrap">
             <div className="jl-live-head">
-              <p className="jl-lbl"><i className={`jl-pulse ${failed ? "is-off" : ""}`} />{failed ? "Testnet unreadable" : posts ? "Live from the factory" : "Reading testnet"}</p>
+              <p className="jl-lbl"><i className={`jl-pulse ${failed ? "is-off" : ""}`} />{failed ? "Fuji unreadable" : posts ? "Live from the factory" : "Reading Fuji"}</p>
               <h2 id="jl-live-title" className="jl-visually-hidden">Live figures</h2>
               {FACTORY ? (
                 <a className="jl-acct" href={explorer("address", FACTORY)} target="_blank" rel="noreferrer">{FACTORY} <External /></a>
@@ -214,10 +217,11 @@ export default function Landing() {
             <dl className="jl-stats">
               <div><dt>Posts</dt><dd>{stat(posts?.length)}</dd><span>{graduated !== undefined ? `${graduated} graduated` : " "}</span></div>
               <div><dt>Holders</dt><dd>{stat(holders)}</dd><span>summed across posts</span></div>
-              <div><dt>In floors</dt><dd>{stat(floors !== undefined ? nearFigure(floors) : undefined)}<small>NEAR</small></dd><span>redeemable by holders</span></div>
+              <div><dt>In floors</dt><dd>{stat(floors !== undefined ? avaxFigure(floors) : undefined)}<small>AVAX</small></dd><span>redeemable by holders</span></div>
+              <div><dt>Block every</dt><dd>{cadence ? (cadence.ms / 1000).toFixed(2) : cadence === null ? "…" : "—"}<small>s</small></dd><span>{cadence ? `Fuji, last ${cadence.blocks} blocks` : "read from block headers"}</span></div>
             </dl>
             {failed ? (
-              <p className="jl-err" role="alert"><img className="jl-obj" src="/art/3d/juno-3d-warning.webp" width={64} height={64} alt="" aria-hidden="true" decoding="async" draggable={false} /><span>Could not read {FACTORY ?? "the factory"} on NEAR testnet: {markets.error}</span></p>
+              <p className="jl-err" role="alert"><img className="jl-obj" src="/art/3d/juno-3d-warning.webp" width={64} height={64} alt="" aria-hidden="true" decoding="async" draggable={false} /><span>Could not read {FACTORY ?? "the factory"} on Avalanche Fuji: {markets.error}</span></p>
             ) : (
               <ul className="jl-tape-row" aria-label="Posts on the factory">
                 {(posts ?? []).map((c) => (
@@ -226,10 +230,10 @@ export default function Landing() {
                       <img src={c.media.url} alt="" loading="lazy" decoding="async" />
                       <span className="jl-chip-body">
                         <b>${c.symbol}</b>
-                        <span>{c.curve.graduated ? "Graduated" : c.near.phase === "curve" ? "On the curve" : c.near.phase === "commit" ? "Sealed bids open" : c.near.phase === "reveal" ? "Revealing" : "Settling"}</span>
+                        <span>{c.curve.graduated ? "Graduated" : c.onchain.phase === "curve" ? "On the curve" : c.onchain.phase === "commit" ? "Sealed bids open" : c.onchain.phase === "reveal" ? "Revealing" : "Settling"}</span>
                         <span>{c.holders ?? 0} {c.holders === 1 ? "holder" : "holders"}</span>
                       </span>
-                      <span className="jl-chip-fig"><b>{nearFigure(c.near.floorVault)}</b><span>NEAR floor</span></span>
+                      <span className="jl-chip-fig"><b>{avaxFigure(c.onchain.floorVault)}</b><span>AVAX floor</span></span>
                     </a>
                   </li>
                 ))}
@@ -251,24 +255,24 @@ export default function Landing() {
                 <div className="jl-beat-art"><PhotoCard src={ART.sprout} seed={21} className="beat-card" /></div>
                 <span className="jl-beat-n">01 · Post</span>
                 <h3>Post a photo. It becomes a coin.</h3>
-                <p>Posting creates a NEAR account named after it, <code>{"<name>."}{FACTORY ?? "<factory>"}</code>. That account is the token, the auction and the vault.</p>
-                <p className="jl-fig">{sprout ? <><b>{sprout.address}</b><span>a live post account</span></> : <span>{failed ? "Testnet unreadable" : "Reading testnet…"}</span>}</p>
+                <p>Posting deploys the post&apos;s own contract from the factory. That one contract is the ERC-20 coin, the auction and the vault.</p>
+                <p className="jl-fig">{sprout ? <><b>{sprout.address.slice(0, 10)}…{sprout.address.slice(-6)}</b><span>a live post contract</span></> : <span>{failed ? "Fuji unreadable" : "Reading Fuji…"}</span>}</p>
               </li>
               <li>
                 <div className="jl-beat-art jl-seal" aria-hidden="true">
-                  <span className="jl-env e1" /><span className="jl-env e2" /><span className="jl-env e3"><i>sha256</i></span>
+                  <span className="jl-env e1" /><span className="jl-env e2" /><span className="jl-env e3"><i>keccak</i></span>
                 </div>
                 <span className="jl-beat-n">02 · Sealed opening</span>
                 <h3>One minute of sealed bids. One price for all.</h3>
-                <p>Every bidder escrows exactly 1 NEAR and posts only a hash. After the reveal, every winner pays the same clearing price, so being first buys nothing.</p>
-                <p className="jl-fig">{settled ? <><b>{settled.near.sealedBids} sealed bids · {nearFigure(settled.near.clearingPrice)} NEAR</b><span>${settled.symbol} cleared at one price</span></> : bids !== undefined ? <><b>{bids} sealed bids</b><span>across every post</span></> : <span>{failed ? "Testnet unreadable" : "Reading testnet…"}</span>}</p>
+                <p>Every bidder escrows exactly 0.005 AVAX and posts only a hash. After the reveal, every winner pays the same clearing price, so being first, or a bot, buys nothing.</p>
+                <p className="jl-fig">{settled ? <><b>{settled.onchain.sealedBids} sealed bids · {avaxFigure(settled.onchain.clearingPrice)} AVAX</b><span>${settled.symbol} cleared at one price</span></> : bids !== undefined ? <><b>{bids} sealed bids</b><span>across every post</span></> : <span>{failed ? "Fuji unreadable" : "Reading Fuji…"}</span>}</p>
               </li>
               <li>
                 <div className="jl-beat-art"><img className="jl-die beat-coin" src={ART.coin} alt="" aria-hidden="true" /></div>
                 <span className="jl-beat-n">03 · Floor</span>
                 <h3>A floor you can always redeem.</h3>
                 <p>20% of every curve buy and half the auction raise go into the post's vault. Any holder can burn tokens and take their share of it, at any time.</p>
-                <p className="jl-fig">{deepest ? <><b>{nearFigure(deepest.near.floorVault)} NEAR</b><span>in ${deepest.symbol}'s floor vault</span></> : <span>{failed ? "Testnet unreadable" : "Reading testnet…"}</span>}</p>
+                <p className="jl-fig">{deepest ? <><b>{avaxFigure(deepest.onchain.floorVault)} AVAX</b><span>in ${deepest.symbol}'s floor vault</span></> : <span>{failed ? "Fuji unreadable" : "Reading Fuji…"}</span>}</p>
               </li>
             </ol>
           </div>
@@ -279,21 +283,21 @@ export default function Landing() {
             <div className="jl-phone-copy">
               <p className="jl-lbl jl-lbl-dark">The app</p>
               <h2 id="jl-phone-title">A feed first. The market comes with it.</h2>
-              <p>Scroll, like, and tap Buy. Every card reads its post's contract on NEAR testnet: the price in NEAR, who bought, how far to graduation, and the floor.</p>
+              <p>Scroll, like, and tap Buy. Every card reads its post&apos;s contract on Fuji: the price in AVAX, who bought, how far to graduation, and the floor.</p>
               <ul className="jl-points">
-                <li><b>Floor chip</b><span>the NEAR each token can redeem right now</span></li>
-                <li><b>Bought by</b><span>names from the contract's own fill log</span></li>
-                <li><b>Buy</b><span>quotes from <code>quote_buy</code> on the post account</span></li>
+                <li><b>Floor chip</b><span>the AVAX each token can redeem right now</span></li>
+                <li><b>Bought by</b><span>names from the contract&apos;s own fill log</span></li>
+                <li><b>Final in 0.9 s</b><span>every trade shows how long Avalanche took</span></li>
               </ul>
               <a href="/social" onClick={go("/(tabs)/social")} className="jl-more">Scroll the feed <Arrow /></a>
             </div>
             <figure className="jl-phone-fig">
               <div className="jl-phone">
                 <span className="jl-island" aria-hidden="true" />
-                <img src="/landing/feed-390.webp" width={390} height={844} alt="Juno's feed: the Balloons post with its price in NEAR, Bought by kai and 1 other, 11% to graduation and its floor in NEAR" loading="lazy" decoding="async" />
+                <img src="/landing/feed-390.webp" width={390} height={844} alt="Juno's feed on Avalanche Fuji: a post with its price in AVAX, who bought it, its progress to graduation and its floor" loading="lazy" decoding="async" />
               </div>
               <DieCut src={ART.coin} className="st-phone-coin" />
-              <figcaption>Screenshot of /social on NEAR testnet, 9 Nov 2026</figcaption>
+              <figcaption>Screenshot of /social on Avalanche Fuji</figcaption>
             </figure>
           </div>
         </section>
@@ -301,29 +305,29 @@ export default function Landing() {
         <section className="jl-sec" id="tech" aria-labelledby="jl-tech-title">
           <div className="jl-wrap">
             <header className="jl-head">
-              <p className="jl-lbl">The NEAR tech</p>
+              <p className="jl-lbl">The Avalanche tech</p>
               <h2 id="jl-tech-title">What runs where, plainly.</h2>
             </header>
             <div className="jl-tech">
               <article>
-                <h3>A post is an account</h3>
-                <p><code>create_post</code> on the factory creates <code>{"<slug>."}{FACTORY ?? "<factory>"}</code> and deploys the locked token code to it in one transaction. No pool, no registry: the account is the market.</p>
+                <h3>A post is a contract</h3>
+                <p><code>createPost</code> on the factory deploys the post&apos;s own <code>JunoPost</code> in one transaction: a 0-decimal ERC-20 with the auction, curve, floor and dare inside. No pool, no registry.</p>
               </article>
               <article>
                 <h3>Commit, reveal, settle</h3>
-                <p>Bids are <code>sha256(account, amount, max price, salt)</code> with identical 1 NEAR escrows. Reveal is open for 60 s; a bid left hidden forfeits 1% to the creator.</p>
+                <p>Bids are <code>keccak(post, chain, bidder, amount, max price, salt)</code> with identical 0.005 AVAX escrows, so a copied hash cannot be revealed by anyone else. A bid left hidden forfeits 1% to the creator.</p>
               </article>
               <article>
                 <h3>Curve and floor vault</h3>
-                <p>800 tokens sell on a 16-segment curve priced in yoctoNEAR integers. <code>redeem</code> burns tokens for up to 99% of the holder's pro-rata vault share.</p>
+                <p>800 tokens sell on a 16-segment curve priced in wei integers, rounded against the trader. <code>redeem</code> burns tokens for 99% of the holder&apos;s pro-rata vault share.</p>
               </article>
               <article>
-                <h3>NEP-141 and NEP-148</h3>
-                <p>Each post coin is a whole-unit fungible token with metadata, <code>ft_transfer</code> and <code>ft_transfer_call</code>, so wallets read it like any NEAR token.</p>
+                <h3>Final in about a second</h3>
+                <p>Avalanche&apos;s C-Chain finalizes a block when it is accepted, with no reorgs to wait out. Every trade in the app shows its own time from broadcast to a final block{DEPLOYMENT.blockMedianMs && DEPLOYMENT.medianMs ? <>. Across {DEPLOYMENT.measuredTxs} seeded transactions the median was <b>{(DEPLOYMENT.blockMedianMs / 1000).toFixed(2)} s</b> to a final block, and {(DEPLOYMENT.medianMs / 1000).toFixed(2)} s until the public RPC returned the receipt</> : null}.</p>
               </article>
               <article>
-                <h3>NEP-366 meta transactions</h3>
-                <p>Email calls use a device-signed delegate action. The relayer checks receiver, method, gas and deposit caps and fronts the deposit. Web wallets sign and pay directly.</p>
+                <h3>Your wallet, no relayer</h3>
+                <p>Core, MetaMask or any EIP-6963 wallet signs each call from your own account. The app simulates every call against Fuji first, so a refusal says why before the wallet opens.</p>
               </article>
               <article>
                 <h3>Accounts</h3>
@@ -347,8 +351,8 @@ export default function Landing() {
       <footer className="jl-foot">
         <div className="jl-wrap jl-foot-row">
           <a href="#top" onClick={jump("top")} className="jl-brand" aria-label="Back to top"><Mark size={22} /><span>juno</span></a>
-          <p>A social feed where every post is a coin, on NEAR testnet. MIT · © 2026 Nivesh Gajengi</p>
-          {FACTORY ? <a className="jl-foot-link" href={explorer("address", FACTORY)} target="_blank" rel="noreferrer">Factory on NearBlocks <External /></a> : null}
+          <p>A social feed where every post is a coin, on Avalanche Fuji. MIT · © 2026 Nivesh Gajengi</p>
+          {FACTORY ? <a className="jl-foot-link" href={explorer("address", FACTORY)} target="_blank" rel="noreferrer">Factory on Snowtrace <External /></a> : null}
         </div>
         <p className="jl-word" aria-hidden="true">juno</p>
       </footer>

@@ -85,7 +85,7 @@ export default function ProfileScreen() {
   // What is still held. A sold-out position stays in the portfolio for its
   // trades and realised P&L, but it is not a holding.
   const held = useMemo(() => (data?.positions ?? []).filter((position) => position.balance > 0), [data?.positions]);
-  const currency = data?.currency ?? "NEAR";
+  const currency = data?.currency ?? "AVAX";
 
   /*
    * P&L, or null when there is nothing to stand behind.
@@ -132,20 +132,14 @@ export default function ProfileScreen() {
         <Placeholder
           art
           title="No wallet yet"
-          detail={
-            wallet.walletLogin
-              ? `Sign in with your email, or connect a NEAR wallet you already have. ${NETWORK_LABEL}.`
-              : wallet.emailLogin
-              ? `Sign in with your email. Juno makes you a NEAR account, with no seed phrase; the key stays on this device. ${NETWORK_LABEL}.`
-              : `${NETWORK_LABEL}.`
-          }
+          detail={`Connect Core, MetaMask or any browser wallet. Your wallet signs every bid and trade. ${NETWORK_LABEL}.`}
           action={
             // Not `.then(portfolio.refresh)`: that refresh was captured before
             // the wallet existed, re-ran the read with no address, and its
             // null landed last — "Holdings could not be read" on a wallet
             // created a second ago. The address change re-reads on its own.
             <Button
-              label="Sign in"
+              label="Connect wallet"
               onPress={() => void wallet.connect().catch(() => undefined)}
             />
           }
@@ -174,7 +168,7 @@ export default function ProfileScreen() {
           <Heading>
             <Handle wallet={wallet.address} />
           </Heading>
-          <Caption>{wallet.via === "wallet" ? "NEAR wallet" : "Email account"} · {NETWORK_NAME}</Caption>
+          <Caption>{wallet.walletName ?? "Wallet"} · {NETWORK_NAME}</Caption>
         </Identity>
 
         <WalletCard address={wallet.address} />
@@ -357,8 +351,8 @@ export default function ProfileScreen() {
           <Card>
             <Body muted>
               {wallet.via === "wallet"
-                ? `This is your own NEAR account on ${NETWORK_NAME}. You approve every call in your wallet and pay its gas and deposit; Juno never sees its key.`
-                : `This is a named NEAR account on ${NETWORK_NAME}. Its key was generated on this device and stays here; the Juno relayer only submits the transactions you sign, as NEP-366 meta transactions, and pays their gas.`}
+                ? `This is your own account on ${NETWORK_NAME}. You approve every call in ${wallet.walletName ?? "your wallet"} and pay its gas; Juno never sees its key.`
+                : `This is your own account on ${NETWORK_NAME}.`}
             </Body>
             <Button
               label={`View this account on ${EXPLORER_NAME}`}

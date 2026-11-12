@@ -1,14 +1,14 @@
 {
   "expo": {
     "name": "Juno",
-    "slug": "juno-near",
-    "version": "3.0.0",
+    "slug": "juno-avax",
+    "version": "4.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.launch.junonear"
+      "bundleIdentifier": "app.launch.junoavax"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,8 +18,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "app.launch.junonear",
-      "versionCode": 300
+      "package": "app.launch.junoavax",
+      "versionCode": 400
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,7 +28,6 @@
       "expo-router",
       "expo-video",
       "expo-font",
-      "expo-secure-store",
       [
         "expo-image-picker",
         {
@@ -37,8 +36,8 @@
       ],
       "./plugins/withQuotedBundleScript"
     ],
-    "scheme": "junonear",
+    "scheme": "junoavax",
     "backgroundColor": "#D3E3CB",
-    "description": "Every post is a market: photos launch as named NEAR sub-accounts with a sealed-bid opening auction, a bonding curve, a redeemable NEAR floor and dare bonds."
+    "description": "Every post is a coin on Avalanche: a one-minute sealed-bid opening auction with one clearing price, a bonding curve in AVAX, a floor every holder can redeem, and dare bonds. Fuji testnet."
   }
 }

@@ -58,7 +58,7 @@ export function money(
           : abs < 0.0001
             ? subscripted(abs)
             : abs < 1
-              ? abs.toFixed(4)
+              ? String(Number(abs.toPrecision(3)))
               : abs.toFixed(2);
 
   return currency === "USD" ? `${sign}$${figure}` : `${sign}${figure} ${currency}`;
@@ -139,10 +139,10 @@ export function splitAmount(value: string | number, places = 4): { whole: string
 }
 
 /**
- * An amount of a quote token, labelled: "0.4211 NEAR".
+ * An amount of a quote token, labelled: "0.4211 AVAX".
  *
  * The unit always prints. Small amounts keep four decimals (a burn on one
- * trade is usually well under one NEAR); large ones are grouped.
+ * trade is usually well under one AVAX); large ones are grouped.
  */
 export function amountOf(value: string | number | null | undefined, unit: string): string {
   if (value === null || value === undefined) return "—";
@@ -150,7 +150,7 @@ export function amountOf(value: string | number | null | undefined, unit: string
   if (!Number.isFinite(n)) return "—";
   if (n === 0) return `0 ${unit}`;
   const abs = Math.abs(n);
-  // Tiny but real (a 0.000092 NEAR fee): two significant figures,
+  // Tiny but real (a 0.000092 AVAX fee): two significant figures,
   // never rounded to zero and never shown as a vague "<0.0001".
   if (abs < 0.0001) return `${n < 0 ? "-" : ""}${Number(abs.toPrecision(2)).toFixed(Math.min(18, 1 - Math.floor(Math.log10(abs))))} ${unit}`;
   const places = abs >= 1000 ? 0 : abs >= 1 ? 2 : 4;
