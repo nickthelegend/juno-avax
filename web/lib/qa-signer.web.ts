@@ -107,3 +107,12 @@ export async function signWithWallet(from: Address, message: string): Promise<He
   validateQaMessage(message, current.account.address);
   return current.account.signMessage({ message });
 }
+
+export function isLocalWallet(): boolean {
+  return false;
+}
+
+/** The QA signer never asks Juno's gas sponsor: it is funded by the harness. */
+export async function signRawWithWallet(_from: Address, _raw: Hex): Promise<Hex> {
+  throw Error("QA signer does not sign gas requests.");
+}

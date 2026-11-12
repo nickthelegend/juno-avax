@@ -6,26 +6,31 @@ import { BottomSheet } from "./BottomSheet";
 import { Object3D } from "./art3d";
 import { Body, Button, Title } from "./kit";
 import { Tappable } from "./Press";
+import { JunoIcon } from "./logo";
 import type { SignInBridge } from "../lib/wallet";
 import type { WalletOption } from "../lib/browser-wallet";
 import { FAUCET_URL, NETWORK_LABEL } from "../lib/chain";
+import { KEY_HOME, LOCAL_ID } from "../lib/local-wallet";
 import { theme } from "../theme";
 
 /**
  * Connect a wallet. The sheet lists every wallet this browser announces
  * (EIP-6963), Core first; one tap asks it for an account and moves it to
- * Avalanche Fuji. With no wallet installed it says so and links to Core,
- * rather than pretending.
+ * Avalanche Fuji. The Juno wallet (a test key made on this device) is always
+ * listed, so a first try needs nothing installed: one tap creates it and gets
+ * its starter test AVAX from Juno's gas sponsor.
  */
 export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; onClose: () => void; bridge: SignInBridge }) {
   const [wallets, setWallets] = useState<WalletOption[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
     setError(null);
     setBusy(null);
+    setStatus(null);
     setWallets(null);
     let live = true;
     bridge
@@ -40,12 +45,14 @@ export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; on
   const connect = async (id: string) => {
     setBusy(id);
     setError(null);
+    setStatus(null);
     try {
-      await bridge.connect(id);
+      await bridge.connect(id, setStatus);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The wallet did not connect");
     } finally {
       setBusy(null);
+      setStatus(null);
     }
   };
 
@@ -60,23 +67,30 @@ export function SignInSheet({ visible, onClose, bridge }: { visible: boolean; on
 
         {wallets === null ? (
           <Hint>Looking for wallets…</Hint>
-        ) : wallets.length === 0 ? (
-          <>
-            <Body>No wallet found in this browser.</Body>
-            <Button label="Get Core wallet" variant="lime" tall onPress={() => void Linking.openURL("https://core.app")} />
-          </>
         ) : (
-          <List>
-            {wallets.map((w) => (
-              <Tappable key={w.id} onPress={() => void connect(w.id)} to={0.98} accessibilityRole="button" accessibilityLabel={`Connect ${w.name}`} disabled={!!busy}>
-                <Row>
-                  {w.icon ? <Image source={{ uri: w.icon }} style={{ width: 32, height: 32, borderRadius: 8 }} accessibilityIgnoresInvertColors /> : <Blank />}
-                  <Name numberOfLines={1}>{w.name}</Name>
-                  <Go>{busy === w.id ? "Approve in wallet…" : "Connect"}</Go>
-                </Row>
-              </Tappable>
-            ))}
-          </List>
+          <>
+            {wallets.some((w) => w.id !== LOCAL_ID) ? null : <Body>No browser wallet found. Use a Juno wallet to try it now.</Body>}
+            <List>
+              {wallets.map((w) => {
+                const isLocal = w.id === LOCAL_ID;
+                return (
+                  <Tappable key={w.id} onPress={() => void connect(w.id)} to={0.98} accessibilityRole="button" accessibilityLabel={isLocal ? "Use a Juno wallet" : `Connect ${w.name}`} disabled={!!busy}>
+                    <Row>
+                      {isLocal ? <JunoIcon size={32} radius={8} /> : w.icon ? <Image source={{ uri: w.icon }} style={{ width: 32, height: 32, borderRadius: 8 }} accessibilityIgnoresInvertColors /> : <Blank />}
+                      <Names>
+                        <Name numberOfLines={1}>{w.name}</Name>
+                        {isLocal ? <Sub numberOfLines={1}>Test wallet in {KEY_HOME} · free test AVAX</Sub> : null}
+                      </Names>
+                      <Go>{busy === w.id ? (isLocal ? status ?? "Opening…" : "Approve in wallet…") : isLocal ? "Use" : "Connect"}</Go>
+                    </Row>
+                  </Tappable>
+                );
+              })}
+            </List>
+            {wallets.some((w) => w.id !== LOCAL_ID) ? null : (
+              <Button label="Get Core wallet" variant="quiet" onPress={() => void Linking.openURL("https://core.app")} />
+            )}
+          </>
         )}
 
         {error ? <ErrorText>{error}</ErrorText> : null}
@@ -124,8 +138,17 @@ const Blank = styled.View`
   background-color: ${(p) => p.theme.colors.ink};
 `;
 
-const Name = styled.Text`
+const Names = styled.View`
   flex: 1;
+  gap: 2px;
+`;
+
+const Sub = styled.Text`
+  font-size: ${(p) => p.theme.type.caption.size}px;
+  color: ${(p) => p.theme.colors.muted};
+`;
+
+const Name = styled.Text`
   font-size: ${(p) => p.theme.type.body.size}px;
   font-weight: 700;
   color: ${(p) => p.theme.colors.text};

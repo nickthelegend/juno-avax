@@ -1,32 +1,50 @@
 /**
- * The native build has no browser wallet. Metro picks `browser-wallet.web.ts`
- * for the web export; this file keeps the same shape so `wallet.tsx` imports
- * one module on every platform. A native wallet (Core mobile via
- * WalletConnect) is not wired in this build.
+ * Wallets on iOS and Android: the Juno wallet, a Fuji test key made on this phone and kept in its keychain
+ * (lib/local-wallet). Metro picks `browser-wallet.web.ts` for the web export, where browser wallets (Core,
+ * MetaMask) are offered as well. A native Core mobile connection (WalletConnect) is not wired in this build.
  */
-import type { Address, Hex } from "viem";
+import { getAddress, type Address, type Hex } from "viem";
+
+import { LOCAL_ID, LOCAL_NAME, localAddress, openLocal, sendLocal, signLocal, signRawLocal } from "./local-wallet";
 
 export type WalletOption = { id: string; name: string; icon: string | null; provider: unknown };
 export const BROWSER_WALLET: { id: string; name: string; url: string } | null = null;
-const unavailable = () => new Error("Wallet connection is available in the web app.");
+const LOCAL: WalletOption = { id: LOCAL_ID, name: LOCAL_NAME, icon: null, provider: null };
+let connected = false;
 
 export async function discoverWallets(): Promise<WalletOption[]> {
-  return [];
+  return [LOCAL];
 }
 export function preloadWallet(): void {}
+/** The phone reopens its Juno wallet on launch when it has one. */
 export async function restoreWallet(): Promise<string | null> {
-  return null;
+  const address = await localAddress();
+  connected = !!address;
+  return address ? getAddress(address) : null;
 }
 export async function connectWallet(_id?: string): Promise<string> {
-  throw unavailable();
+  const { address } = await openLocal();
+  connected = true;
+  return getAddress(address);
 }
-export async function disconnectWallet(): Promise<void> {}
+export async function disconnectWallet(): Promise<void> {
+  connected = false;
+}
 export function activeWalletName(): string | null {
-  return null;
+  return connected ? LOCAL_NAME : null;
 }
-export async function sendWithWallet(_tx: { from: Address; to: Address; data: Hex; value: bigint }): Promise<Hex> {
-  throw unavailable();
+export function isLocalWallet(): boolean {
+  return connected;
 }
-export async function signWithWallet(_from: Address, _message: string): Promise<Hex> {
-  throw unavailable();
+export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex; value: bigint }): Promise<Hex> {
+  if (!connected) throw new Error("Open the Juno wallet first.");
+  return sendLocal(tx);
+}
+export async function signWithWallet(from: Address, message: string): Promise<Hex> {
+  if (!connected) throw new Error("Open the Juno wallet first.");
+  return signLocal(from, message);
+}
+export async function signRawWithWallet(from: Address, raw: Hex): Promise<Hex> {
+  if (!connected) throw new Error("Open the Juno wallet first.");
+  return signRawLocal(from, raw);
 }

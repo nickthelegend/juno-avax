@@ -13,10 +13,13 @@ import {
   discoverWallets,
   preloadWallet,
   restoreWallet,
+  isLocalWallet,
   sendWithWallet,
+  signRawWithWallet,
   signWithWallet,
   type WalletOption,
 } from "./browser-wallet";
+import { canGetGas, getGas } from "./gas";
 import { describeTxError, EXPLORER_NAME, FACTORY, TxError } from "./chain";
 import { recordConfirmation } from "./finality";
 import { confirmTx } from "./tx-status";
@@ -24,8 +27,10 @@ import { SignInSheet } from "../components/SignInSheet";
 
 /**
  * The wallet: Juno on Avalanche, signed by the person's own browser wallet
- * (Core, MetaMask or any EIP-1193 wallet). There is no Juno server and no
- * relayer: every call is a normal Fuji transaction from the person's account.
+ * (Core, MetaMask or any EIP-1193 wallet) or by the Juno wallet, a test key
+ * made on this device. Every call is a normal Fuji transaction from the
+ * person's account. The only server is Juno's gas sponsor, which gives a
+ * brand-new, empty wallet its starter test AVAX (lib/gas).
  *
  * Each step is first simulated against Fuji (`eth_call`), so a call the
  * contract would refuse says why before the wallet opens. Then the wallet
@@ -55,8 +60,11 @@ export type SendResult = {
 
 export type SignInBridge = {
   wallets: () => Promise<WalletOption[]>;
-  connect: (id: string) => Promise<void>;
+  /** Connects; a brand-new, empty account then gets its starter AVAX (`onStatus` says so while it waits). */
+  connect: (id: string, onStatus?: (status: string) => void) => Promise<void>;
 };
+
+export type GasState = { phase: "idle" | "asking" | "done" | "failed"; hash?: string; amount?: string; error?: string; setup?: boolean };
 
 export type WalletState = {
   /** The connected account (checksummed), or null when signed out. */
@@ -69,6 +77,12 @@ export type WalletState = {
   send: (steps: TxStep[], options?: { onProgress?: (progress: SendProgress) => void }) => Promise<SendResult>;
   /** personal_sign with the connected wallet (used once to derive the eERC key; not a transaction). */
   signMessage: (message: string) => Promise<Hex>;
+  /** True when the account is the Juno wallet on this device. */
+  local: boolean;
+  /** The starter-AVAX request for this account, if one was made this session. */
+  gas: GasState;
+  /** Ask Juno's gas sponsor for this account's starter AVAX (once per wallet, only while empty). */
+  getGas: () => Promise<void>;
   connect: () => Promise<string>;
   disconnect: () => Promise<void>;
 };
@@ -113,6 +127,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [local, setLocal] = useState(false);
+  const [gas, setGas] = useState<GasState>({ phase: "idle" });
   const pending = useRef<{ resolve: (address: string) => void; reject: (error: Error) => void } | null>(null);
   /**
    * The connected account, readable by a `send` that was created before the
@@ -133,6 +149,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         if (!live) return;
         adopt(account);
         setWalletName(account ? activeWalletName() : null);
+        setLocal(!!account && isLocalWallet());
         setReady(true);
       });
     return () => {
@@ -159,10 +176,27 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     pending.current = null;
   }, []);
 
+  const askGas = useCallback(async (account: string) => {
+    setGas({ phase: "asking" });
+    try {
+      const r = await getGas(account as Address, (raw) => signRawWithWallet(account as Address, raw));
+      setGas({ phase: "done", hash: r.hash, amount: r.amount });
+      invalidateMarkets();
+      feedChanged();
+    } catch (error) {
+      const failure = describeTxError(error);
+      if (failure.cancelled) {
+        setGas({ phase: "idle" });
+        return;
+      }
+      setGas({ phase: "failed", error: error instanceof Error ? error.message : failure.message, setup: (error as Error)?.name === "SetupError" || /^Setup required/.test(String((error as Error)?.message)) });
+    }
+  }, []);
+
   const bridge = useMemo<SignInBridge>(
     () => ({
       wallets: discoverWallets,
-      connect: async (id) => {
+      connect: async (id, onStatus) => {
         if (!FACTORY) throw new Error("Setup required: EXPO_PUBLIC_JUNO_FACTORY");
         const account = await connectWallet(id).catch((error: unknown) => {
           const failure = describeTxError(error);
@@ -170,19 +204,35 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         });
         adopt(account);
         setWalletName(activeWalletName());
+        setGas({ phase: "idle" });
+        const isLocal = isLocalWallet();
+        setLocal(isLocal);
+        // The Juno wallet is new and empty: get its starter AVAX in the same tap.
+        if (isLocal && (await canGetGas(account as Address).catch(() => false))) {
+          onStatus?.("Getting test AVAX…");
+          await askGas(account);
+        }
         setSigningIn(false);
         pending.current?.resolve(account);
         pending.current = null;
       },
     }),
-    [adopt],
+    [adopt, askGas],
   );
 
   const disconnect = useCallback(async () => {
     await disconnectWallet().catch(() => undefined);
     adopt(null);
     setWalletName(null);
+    setLocal(false);
+    setGas({ phase: "idle" });
   }, [adopt]);
+
+  const requestStarterGas = useCallback(async () => {
+    const account = current.current;
+    if (!account) throw new TxError({ message: "Connect a wallet to continue.", cancelled: false, reason: null });
+    await askGas(account);
+  }, [askGas]);
 
   const send = useCallback<WalletState["send"]>(
     async (steps, options = {}) => {
@@ -211,6 +261,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             if (!failure) break;
             if (attempt < 4 && failure.reason && TIME_WINDOWS.has(failure.reason)) {
               await new Promise((resolve) => setTimeout(resolve, 1500));
+              continue;
+            }
+            // A step right after one this batch just confirmed (shield after its approval) can be simulated on a
+            // public RPC node that has not seen that block yet, and revert with no reason. Ask again shortly.
+            if (attempt < 5 && index > 0 && !failure.reason) {
+              await new Promise((resolve) => setTimeout(resolve, 1200));
               continue;
             }
             throw new TxError(failure);
@@ -257,8 +313,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<WalletState>(
-    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, signMessage, connect, disconnect }),
-    [address, ready, signing, walletName, send, signMessage, connect, disconnect],
+    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, signMessage, local, gas, getGas: requestStarterGas, connect, disconnect }),
+    [address, ready, signing, walletName, send, signMessage, local, gas, requestStarterGas, connect, disconnect],
   );
 
   return (

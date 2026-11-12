@@ -7,16 +7,20 @@
  * Before the first call the wallet is moved to Avalanche Fuji (43113),
  * adding the network when it does not know it.
  *
- * The native build resolves `./browser-wallet` to the stub next to this file.
+ * The Juno wallet (lib/local-wallet) is listed too, for a first try with no wallet installed.
+ *
+ * The native build resolves `./browser-wallet` to the file next to this one.
  */
 import type { Address, Hex } from "viem";
 import { getAddress, numberToHex, toHex } from "viem";
 import { FUJI_EXPLORER } from "@juno/sdk";
 
 import { CHAIN_ID, RPC_URL } from "./chain";
+import { LOCAL_ID, LOCAL_NAME, localAddress, openLocal, sendLocal, signLocal, signRawLocal } from "./local-wallet";
 
 type Eip1193 = { request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown> };
-export type WalletOption = { id: string; name: string; icon: string | null; provider: Eip1193 };
+export type WalletOption = { id: string; name: string; icon: string | null; provider: Eip1193 | null };
+const LOCAL: WalletOption = { id: LOCAL_ID, name: LOCAL_NAME, icon: null, provider: null };
 
 export const BROWSER_WALLET = { id: "injected", name: "your wallet", url: "https://core.app" } as const;
 const SAVED = "juno-avax:wallet";
@@ -41,7 +45,7 @@ export async function discoverWallets(): Promise<WalletOption[]> {
   const w = window as unknown as { avalanche?: Eip1193; ethereum?: Eip1193 & { isMetaMask?: boolean } };
   if (!found.size && w.avalanche) found.set("app.core.extension", { id: "app.core.extension", name: "Core", icon: null, provider: w.avalanche });
   if (!found.size && w.ethereum) found.set("injected", { id: "injected", name: w.ethereum.isMetaMask ? "MetaMask" : "Browser wallet", icon: null, provider: w.ethereum });
-  options = [...found.values()].sort((a, b) => Number(/core/i.test(b.id)) - Number(/core/i.test(a.id)));
+  options = [...[...found.values()].sort((a, b) => Number(/core/i.test(b.id)) - Number(/core/i.test(a.id))), LOCAL];
   return options;
 }
 
@@ -67,9 +71,15 @@ export async function restoreWallet(): Promise<string | null> {
     return null;
   }
   if (!saved) return null;
+  if (saved === LOCAL_ID) {
+    const address = await localAddress();
+    if (!address) return null;
+    active = LOCAL;
+    return getAddress(address);
+  }
   const list = await discoverWallets();
   const option = list.find((o) => o.id === saved);
-  if (!option) return null;
+  if (!option?.provider) return null;
   const accounts = (await option.provider.request({ method: "eth_accounts" }).catch(() => [])) as string[];
   if (!accounts[0]) return null;
   active = option;
@@ -97,6 +107,12 @@ export async function connectWallet(id?: string): Promise<string> {
   const list = options.length ? options : await discoverWallets();
   const option = list.find((o) => o.id === id) ?? list[0];
   if (!option) throw new Error("No browser wallet found. Install Core (core.app) or MetaMask, then try again.");
+  if (!option.provider) {
+    const { address } = await openLocal();
+    active = option;
+    remember(option.id);
+    return getAddress(address);
+  }
   const accounts = (await option.provider.request({ method: "eth_requestAccounts" })) as string[];
   if (!accounts[0]) throw new Error(`${option.name} did not return an account.`);
   await ensureFuji(option.provider);
@@ -109,7 +125,7 @@ export async function disconnectWallet(): Promise<void> {
   const option = active;
   active = null;
   remember(null);
-  await option?.provider.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => undefined);
+  await option?.provider?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => undefined);
 }
 
 export function activeWalletName(): string | null {
@@ -119,6 +135,7 @@ export function activeWalletName(): string | null {
 /** Have the wallet sign and send one call. Resolves with the hash once the wallet has broadcast it. */
 export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex; value: bigint }): Promise<Hex> {
   if (!active) throw new Error("Connect a wallet first.");
+  if (!active.provider) return sendLocal(tx);
   await ensureFuji(active.provider);
   const hash = (await active.provider.request({
     method: "eth_sendTransaction",
@@ -134,7 +151,22 @@ export async function sendWithWallet(tx: { from: Address; to: Address; data: Hex
  */
 export async function signWithWallet(from: Address, message: string): Promise<Hex> {
   if (!active) throw new Error("Connect a wallet first.");
+  if (!active.provider) return signLocal(from, message);
   const signature = (await active.provider.request({ method: "personal_sign", params: [toHex(message), from] })) as Hex;
   if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error("The wallet did not return a signature.");
   return signature;
+}
+
+/** personal_sign over raw bytes (Juno's gas request digest). Not a transaction. */
+export async function signRawWithWallet(from: Address, raw: Hex): Promise<Hex> {
+  if (!active) throw new Error("Connect a wallet first.");
+  if (!active.provider) return signRawLocal(from, raw);
+  const signature = (await active.provider.request({ method: "personal_sign", params: [raw, from] })) as Hex;
+  if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new Error("The wallet did not return a signature.");
+  return signature;
+}
+
+/** True when the connected wallet is the Juno wallet on this device. */
+export function isLocalWallet(): boolean {
+  return active?.id === LOCAL_ID;
 }

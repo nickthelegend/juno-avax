@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import styled from "styled-components/native";
@@ -49,7 +49,7 @@ const TABS = [
 
 export default function VaultScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ coin?: string; view?: string }>();
+  const params = useLocalSearchParams<{ coin?: string; view?: string; to?: string }>();
   const [view, setView] = useState<View3>(params.view === "auditor" ? "auditor" : params.view === "yours" || params.coin ? "yours" : "public");
   const revision = useFeedRevision();
   const [tick, setTick] = useState(0);
@@ -101,7 +101,7 @@ export default function VaultScreen() {
         ) : view === "public" ? (
           <PublicView data={snapshot.data} onOpen={(coin) => router.push(`/coin/${coin}` as never)} />
         ) : view === "yours" ? (
-          <YourView data={snapshot.data} preset={params.coin ?? null} onChanged={() => setTick((n) => n + 1)} />
+          <YourView data={snapshot.data} preset={params.coin ?? null} presetTo={params.to ?? null} onChanged={() => setTick((n) => n + 1)} />
         ) : (
           <AuditorView data={snapshot.data} />
         )}
@@ -258,7 +258,7 @@ function MovesList({ moves, coinOf, audited = false }: { moves: VaultMove[]; coi
 
 type Action = "shield" | "send" | "unshield";
 
-function YourView({ data, preset, onChanged }: { data: VaultSnapshot; preset: string | null; onChanged: () => void }) {
+function YourView({ data, preset, presetTo, onChanged }: { data: VaultSnapshot; preset: string | null; presetTo: string | null; onChanged: () => void }) {
   const wallet = useWallet();
   const account = wallet.address as Address | null;
   const [key, setKey] = useState<Keypair | null>(null);
@@ -270,7 +270,9 @@ function YourView({ data, preset, onChanged }: { data: VaultSnapshot; preset: st
   const [action, setAction] = useState<Action>("shield");
   const [coin, setCoin] = useState<string | null>(preset);
   const [amount, setAmount] = useState("");
-  const [to, setTo] = useState<string | null>(null);
+  // From "Tip the creator privately": the creator is picked; the form opens on Send once this coin is in your bag.
+  const tipTo = presetTo && data.members.some((m) => sameAddress(m.address, presetTo)) ? presetTo : null;
+  const [to, setTo] = useState<string | null>(tipTo);
 
   useEffect(() => {
     setKey(null);
@@ -280,6 +282,14 @@ function YourView({ data, preset, onChanged }: { data: VaultSnapshot; preset: st
   }, [account]);
 
   const bags = useApi(async () => (account && key && status === "match" ? myBags(account, key, data.coins) : null), [account, key, status, data, rev]);
+  const tipOpened = useRef(false);
+  useEffect(() => {
+    if (!tipTo || tipOpened.current || !bags.data) return;
+    if (bags.data.some((b) => b.balance > 0 && sameAddress(b.coin.address, coin))) {
+      tipOpened.current = true;
+      setAction("send");
+    }
+  }, [tipTo, bags.data, coin]);
   const publicHoldings = useApi(async () => {
     if (!account) return null;
     const { juno } = await import("../lib/api");

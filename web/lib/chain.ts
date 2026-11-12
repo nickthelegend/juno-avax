@@ -143,7 +143,7 @@ export function describeTxError(error: unknown): TxFailure {
   const name = revertName(error);
   if (name) return { message: REASONS[name] ?? `The contract refused it (${name}).`, cancelled: false, reason: name };
   if (/insufficient funds|exceeds the balance|not enough/i.test(text)) {
-    return { message: "Not enough test AVAX for this and its gas. Top up from the Fuji faucet.", cancelled: false, reason: null };
+    return { message: "Not enough test AVAX for this and its gas. Get free test AVAX on your Profile.", cancelled: false, reason: null };
   }
   if (/chain|network/i.test(text) && /mismatch|switch|unrecognized|does not match/i.test(text)) {
     return { message: "Switch your wallet to Avalanche Fuji (43113) and try again.", cancelled: false, reason: null };

@@ -13,6 +13,7 @@ import { Handle } from "../../components/Handle";
 import { PriceLine } from "../../components/PriceLine";
 import { Tappable } from "../../components/Press";
 import { TradeSheet } from "../../components/TradeSheet";
+import { AskSheet } from "../../components/AskSheet";
 import {
   Body,
   Button,
@@ -47,7 +48,7 @@ import { money, since, tokens, useApi } from "../../lib/useApi";
 import { shareCoin } from "../../lib/social";
 import { useWallet } from "../../lib/wallet";
 import { useFeedRevision } from "../../lib/refresh";
-import { VAULT } from "../../lib/vault";
+import { isRegistered, VAULT } from "../../lib/vault";
 import { theme } from "../../theme";
 
 /**
@@ -81,6 +82,7 @@ export default function CoinScreen() {
   const [sheet, setSheet] = useState<"buy" | "sell" | "redeem" | null>(null);
   const [tab, setTab] = useState<Tab>("activity");
   const [copied, setCopied] = useState(false);
+  const [asking, setAsking] = useState(false);
   const wallet = useWallet();
   const revision = useFeedRevision();
   // A link that is not an address is answered here, as the server would
@@ -340,10 +342,14 @@ export default function CoinScreen() {
               </FloorRow>
               {coin.onchain.phase === "curve" || coin.onchain.phase === "graduated" ? <AuctionCard coin={coin} onChanged={detail.refresh} /> : null}
               <DareCard coin={coin} onChanged={detail.refresh} />
+              <AskRow onOpen={() => setAsking(true)} />
+              <AskSheet visible={asking} onClose={() => setAsking(false)} coin={coin.address} symbol={coin.symbol} />
               <PrivateBagsRow
                 shielded={detail.data!.holders.find((h) => VAULT && sameAddress(h.wallet, VAULT.encryptedERC))?.balance ?? 0}
                 symbol={coin.symbol}
                 onOpen={() => router.push(`/vault?coin=${coin.address}` as never)}
+                creator={wallet.address && sameAddress(wallet.address, coin.creator.wallet) ? null : coin.creator.wallet}
+                onTip={() => router.push(`/vault?coin=${coin.address}&to=${coin.creator.wallet}` as never)}
               />
 
               {/* The creator's own payday, on their own coin. The contract
@@ -475,30 +481,75 @@ export default function CoinScreen() {
 /* Private bags (eERC)                                                 */
 /* ------------------------------------------------------------------ */
 
-/** How much of this coin sits in the eERC vault (public), and the way in. */
-function PrivateBagsRow({ shielded, symbol, onOpen }: { shielded: number; symbol: string; onOpen: () => void }) {
-  if (!VAULT) return null;
-  const tag = "$" + symbol;
+/** Juno AI: explains this coin from live Fuji reads (components/AskSheet). */
+function AskRow({ onOpen }: { onOpen: () => void }) {
   return (
     <Tappable onPress={onOpen} to={0.98}>
-      <BagRow accessibilityRole="button" accessibilityLabel="Hide your bag">
+      <BagRow accessibilityRole="button" accessibilityLabel="Ask Juno AI">
         <BagLock>
           <Svg width={16} height={16} viewBox="0 0 24 24">
-            <Path d="M7 10V7.5a5 5 0 0 1 10 0V10" stroke={theme.colors.lime} strokeWidth={2.4} fill="none" />
-            <Path d="M5.5 10h13a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-7A1.5 1.5 0 0 1 5.5 10z" fill={theme.colors.lime} />
+            <Path d="M12 2.5l2.2 6.3 6.3 2.2-6.3 2.2L12 19.5l-2.2-6.3L3.5 11l6.3-2.2z" fill={theme.colors.lime} />
           </Svg>
         </BagLock>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <BagTitle>Hide your bag</BagTitle>
-          <BagCaption numberOfLines={2}>
-            {shielded > 0
-              ? `${shielded.toLocaleString("en-US")} ${tag} sit in private bags. Nobody can see whose.`
-              : `Shield your ${tag} so whales and bots cannot see how much you hold.`}
-          </BagCaption>
+          <BagTitle>Ask Juno AI</BagTitle>
+          <BagCaption numberOfLines={2}>How the opening cleared, where the floor sits, who holds it. Read live from Fuji.</BagCaption>
         </View>
         <Chevron color={theme.colors.lime} />
       </BagRow>
     </Tappable>
+  );
+}
+
+/**
+ * How much of this coin sits in the eERC vault (public), and the way in. When
+ * the creator has a private bag, holders can also tip them in this coin with
+ * an eERC transfer: the creator, the tipper and the auditor see the amount;
+ * the public sees only that a private transfer happened.
+ */
+function PrivateBagsRow({ shielded, symbol, onOpen, creator, onTip }: { shielded: number; symbol: string; onOpen: () => void; creator: string | null; onTip: () => void }) {
+  const tippable = useApi(() => (creator && VAULT ? isRegistered(creator as `0x${string}`).then((k) => !!k) : Promise.resolve(false)), [creator]);
+  if (!VAULT) return null;
+  const tag = "$" + symbol;
+  const lock = (
+    <BagLock>
+      <Svg width={16} height={16} viewBox="0 0 24 24">
+        <Path d="M7 10V7.5a5 5 0 0 1 10 0V10" stroke={theme.colors.lime} strokeWidth={2.4} fill="none" />
+        <Path d="M5.5 10h13a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-7A1.5 1.5 0 0 1 5.5 10z" fill={theme.colors.lime} />
+      </Svg>
+    </BagLock>
+  );
+  return (
+    <>
+      <Tappable onPress={onOpen} to={0.98}>
+        <BagRow accessibilityRole="button" accessibilityLabel="Hide your bag">
+          {lock}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <BagTitle>Hide your bag</BagTitle>
+            <BagCaption numberOfLines={2}>
+              {shielded > 0
+                ? `${shielded.toLocaleString("en-US")} ${tag} sit in private bags. Nobody can see whose.`
+                : `Shield your ${tag} so whales and bots cannot see how much you hold.`}
+            </BagCaption>
+          </View>
+          <Chevron color={theme.colors.lime} />
+        </BagRow>
+      </Tappable>
+      {tippable.data && creator ? (
+        <Tappable onPress={onTip} to={0.98}>
+          <BagRow accessibilityRole="button" accessibilityLabel="Tip the creator privately">
+            {lock}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <BagTitle>Tip the creator privately</BagTitle>
+              <BagCaption numberOfLines={2}>
+                Send <Handle wallet={creator} /> some {tag} from your private bag. Only you, they and the auditor see how much.
+              </BagCaption>
+            </View>
+            <Chevron color={theme.colors.lime} />
+          </BagRow>
+        </Tappable>
+      ) : null}
+    </>
   );
 }
 

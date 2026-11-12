@@ -7,6 +7,8 @@ import { Button } from "./kit";
 import { juno } from "../lib/api";
 import { displayAddress, explorer, FAUCET_URL, NETWORK_NAME } from "../lib/chain";
 import { useApi } from "../lib/useApi";
+import { canGetGas } from "../lib/gas";
+import { useWallet } from "../lib/wallet";
 import { useFeedRevision } from "../lib/refresh";
 import { theme } from "../theme";
 
@@ -14,7 +16,8 @@ import { theme } from "../theme";
  * The account itself: its address, what it holds, and how to fund it.
  *
  * The card shows the AVAX balance and how many posts this account holds, read
- * from Fuji, and links to the Core faucet for more test AVAX.
+ * from Fuji. A brand-new, empty account gets its starter test AVAX from
+ * Juno's gas sponsor in one tap; after that the card links to the Core faucet.
  *
  * Balances are shown as a dash when the read fails, never as zero.
  */
@@ -23,6 +26,8 @@ export function WalletCard({ address }: { address: string }) {
   const revision = useFeedRevision();
   const balances = useApi(() => juno.balances(address), [address, revision]);
   const held = useApi(() => juno.portfolio(address).then((p) => p.positions.filter((x) => x.balance > 0).length), [address, revision]);
+  const wallet = useWallet();
+  const starter = useApi(() => canGetGas(address as `0x${string}`), [address, revision, wallet.gas.phase]);
   const [copied, setCopied] = useState(false);
   const shown = displayAddress(address);
 
@@ -77,11 +82,23 @@ export function WalletCard({ address }: { address: string }) {
         <Text style={styles.hint}>A sealed bid escrows 0.005 AVAX, and every call needs a little gas.</Text>
       ) : null}
 
-      <Button
-        label="Get test AVAX"
-        variant={empty ? "lime" : "quiet"}
-        onPress={() => void Linking.openURL(FAUCET_URL)}
-      />
+      {wallet.gas.phase === "done" && wallet.gas.hash ? (
+        <Text style={styles.hint}>
+          {wallet.gas.amount} AVAX from Juno&apos;s gas station ·{" "}
+          <Text style={styles.link} onPress={() => void Linking.openURL(explorer("tx", wallet.gas.hash!))}>
+            Snowtrace
+          </Text>
+        </Text>
+      ) : null}
+      {wallet.gas.phase === "failed" && wallet.gas.error ? <Text style={[styles.message, { color: theme.colors.neg }]}>{wallet.gas.error}</Text> : null}
+
+      {wallet.gas.phase === "asking" ? (
+        <Button label="Getting test AVAX…" variant="lime" disabled onPress={() => undefined} />
+      ) : starter.data && wallet.gas.phase !== "failed" ? (
+        <Button label="Get free test AVAX" variant="lime" onPress={() => void wallet.getGas()} />
+      ) : (
+        <Button label="Get test AVAX" variant={empty ? "lime" : "quiet"} onPress={() => void Linking.openURL(FAUCET_URL)} />
+      )}
     </View>
   );
 }
