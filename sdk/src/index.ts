@@ -85,16 +85,18 @@ export function spotPrice(sold: bigint): bigint {
   return sold >= CURVE_UNITS ? curveCost(CURVE_UNITS - 1n, 1n) : curveCost(sold, 1n);
 }
 
-/** Gross of a buy: the curve price, or the pro-rata floor if that is higher. */
-export function grossBuy(sold: bigint, quantity: bigint, vault: bigint, supply: bigint): bigint {
-  const curve = curveCost(sold, quantity);
+/** Gross of a buy: the highest of the curve, the pro-rata floor and the auction's clearing price. */
+export function grossBuy(sold: bigint, quantity: bigint, vault: bigint, supply: bigint, clearing = 0n): bigint {
+  let gross = curveCost(sold, quantity);
   const floor = supply === 0n ? 0n : (vault * quantity + supply - 1n) / supply;
-  return curve > floor ? curve : floor;
+  if (floor > gross) gross = floor;
+  if (clearing * quantity > gross) gross = clearing * quantity;
+  return gross;
 }
 
 /** Everything a buy costs: gross + 20% into the floor + 1% fee. */
-export function buyQuote(sold: bigint, quantity: bigint, vault = 0n, supply = 0n): bigint {
-  const gross = grossBuy(sold, quantity, vault, supply);
+export function buyQuote(sold: bigint, quantity: bigint, vault = 0n, supply = 0n, clearing = 0n): bigint {
+  const gross = grossBuy(sold, quantity, vault, supply, clearing);
   return gross + gross / 5n + gross / 100n;
 }
 

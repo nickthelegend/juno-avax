@@ -47,6 +47,7 @@ Visual: the auction card mid-countdown (Bid → Reveal → Settle → Trade).
 ## 4. A floor you can always redeem.
 
 - Half the auction raise and 20% of every curve buy go into the post's vault.
+- The curve never sells below the auction's clearing price, so winners are not undercut a block later.
 - Any holder burns tokens for 99% of their share, any time, even after
   graduation. The 1% left behind raises the floor for everyone else.
 - A buy never prices below the floor, so buy-then-redeem always loses (fuzzed).
@@ -67,8 +68,8 @@ Visual: ROOFTOP's dare card — bond, proof, vote bar, "Holders accepted".
 
 ## 6. Live on Fuji, end to end.
 
-- JunoFactory (verified on Snowtrace) and 6 posts.
-- 50 seeded transactions from three test accounts, 0 failed.
+- JunoFactory (verified on Snowtrace) and six posts, all read live by the app.
+- Every seeded transaction from three test accounts recorded with its timing (README tables).
 - One full run driven through the web app in headless Chrome: launch, bid,
   reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim.
 
@@ -78,9 +79,9 @@ Visual: the Snowtrace page of the factory and the tx table from the README.
 
 ## 7. Why Avalanche — what is real, and what is not.
 
-- **Real:** sub-second finality, measured on every trade. Seeded run: median
-  0.47 s from broadcast to a final block (by the block's own millisecond
-  timestamp), 1.85 s until the public RPC returned the receipt.
+- **Real:** sub-second finality, measured on every trade: time from broadcast
+  to a final block (by the block's own millisecond timestamp) and to a
+  readable receipt. The seeded run's medians are in the README.
 - **Real:** C-Chain contracts, Core wallet first (EIP-6963), Fuji throughout.
 - **Not used:** eERC. An auction must read bids to clear them; eERC amounts
   can only be decrypted by their owner and the auditor. Commit-reveal does
@@ -91,7 +92,7 @@ Visual: the Snowtrace page of the factory and the tx table from the README.
 
 ## 8. Built properly.
 
-- 69 Forge tests: auction, curve, floor, dare, factory, attacks (reentrancy,
+- 70 Forge tests: auction, curve, floor, dare, factory, attacks (reentrancy,
   reveal mismatch, late bids, copied commitments, floor drain) and a
   solvency invariant over 2,560 random calls.
 - Shared golden values between Solidity and the TypeScript SDK.

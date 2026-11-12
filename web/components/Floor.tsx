@@ -602,7 +602,8 @@ export function GraduationMoment({ coin }: { coin: Coin }) {
 export function DareCard({ coin, onChanged }: { coin: Coin; onChanged?: () => void }) {
   const wallet = useWallet();
   const n = coin.onchain;
-  const left = useCountdown(n.dareFinalized ? null : n.dareEndMs);
+  // Finalizing needs a block stamped after the window; give Fuji's clock a few seconds past ours.
+  const left = useCountdown(n.dareFinalized ? null : n.dareEndMs + 4000);
   const [proof, setProof] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

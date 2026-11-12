@@ -214,6 +214,16 @@ export default function CoinScreen() {
 
             {coin.onchain.phase !== "curve" && coin.onchain.phase !== "graduated" ? (
               <Padded>
+                {/* What is being auctioned, said before the bid form. */}
+                <Row gap={8} align="center" style={{ marginTop: 14 }}>
+                  <Label style={{ fontWeight: "800", fontSize: 19, letterSpacing: -0.3, flexShrink: 1 }} numberOfLines={1}>
+                    {coin.name} <Label muted style={{ fontSize: 19 }}>${coin.symbol}</Label>
+                  </Label>
+                </Row>
+                <Caption numberOfLines={2} style={{ marginTop: 2 }}>
+                  by <Handle wallet={coin.creator.wallet} />
+                  {coin.description ? ` · ${coin.description}` : ""}
+                </Caption>
                 <AuctionCard coin={coin} onChanged={detail.refresh} />
               </Padded>
             ) : null}

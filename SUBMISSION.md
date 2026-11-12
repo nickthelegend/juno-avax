@@ -39,7 +39,7 @@ Live on Fuji: the factory (source verified on Snowtrace), six posts, 50 seeded t
 - Live app: (Vercel link — orchestrator deploys after review)
 - Demo video (≤ 3 min): (to record)
 - Slides: `docs/SLIDES.md`
-- JunoFactory on Snowtrace: https://testnet.snowtrace.io/address/0x44b3f36175d7426218a9fcac9ab5eb6f8444e758
+- JunoFactory on Snowtrace: https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539
 - Factory deploy tx: https://testnet.snowtrace.io/tx/0x834873b8f9cdad6171057cad507e527ee8903b3c53b3f9c2cedcae4f1a5366de
 - Graduated post PILE-IN: https://testnet.snowtrace.io/address/0x494072474d27a694828F79A2B5794815a4261A87
 - Dare post ROOFTOP: https://testnet.snowtrace.io/address/0xaC07a74c9E32230f36Bd863EC740d4DE51860D39

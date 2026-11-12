@@ -29,13 +29,17 @@ if (d.qaFlow?.steps?.length) {
 }
 
 lines.push(`### Seeded on Fuji (${d.seed.length} transactions, ${d.seed.filter((s) => s.status !== 'success').length} failed)`, '');
-lines.push('Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts`; every call made by `scripts/fuji/seed.ts` and `seed-wave2.ts`.', '');
+lines.push('Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts`; every call made by `scripts/fuji/seed.ts`.', '');
 lines.push('| # | Step | From | Tx | Final block | Receipt |', '| ---: | --- | --- | --- | ---: | ---: |');
 d.seed.forEach((s, i) => lines.push(`| ${i + 1} | ${s.label.replace(/_/g, ' ')} | ${who(s.from)} | ${tx(s.hash)} | ${sec(s.blockMs)} | ${sec(s.confirmMs)} |`));
 lines.push('');
 const st = d.seedStats;
 if (st?.blockMsMedian) {
-  lines.push(`Across the ${st.measured} seeded transactions timed after the polling fix: median **${sec(st.blockMsMedian)}** from broadcast to a final block (p90 ${sec(st.blockMsP90)}), and ${sec(st.confirmMsMedian)} until the public RPC returned the receipt (p90 ${sec(st.confirmMsP90)}). "Final block" is the including block's \`timestampMilliseconds\` minus this machine's clock at broadcast; the first 26 seed transactions were timed by viem's block watcher, which over-reports, so they show only the receipt time.`, '');
+  lines.push(`Across the ${st.txs} seeded transactions: median **${sec(st.blockMsMedian)}** from broadcast to a final block (p90 ${sec(st.blockMsP90)}, over the ${st.blockMsMeasured} where this machine's clock was not ahead of the block's), and ${sec(st.confirmMsMedian)} until the public RPC returned the receipt (p90 ${sec(st.confirmMsP90)}). "Final block" is the including block's \`timestampMilliseconds\` minus this machine's clock at broadcast.`, '');
+}
+if (d.v1) {
+  lines.push('### Superseded: v1', '');
+  lines.push(`A first factory, ${addr(d.v1.factory.address)}, ran ${d.v1.seed.length} seed transactions and 10 steps of the web flow before a design flaw showed in its own chart: a curve buy right after the auction could undercut the auction's clearing price. v2 (above) prices every buy at the highest of the curve, the floor and the clearing price. The test AVAX in v1 was recovered by redeeming (${(d.v1.recovery ?? []).length} transactions). All v1 transactions are kept in \`deployments/fuji.json\` → \`v1\`.`, '');
 }
 
 const readme = join(root, 'README.md');

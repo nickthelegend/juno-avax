@@ -1,8 +1,8 @@
 import {
   accountBalance,
   balanceOf,
-  buyQuote,
   client,
+  grossBuy,
   curveCost,
   formatAvax,
   holders as readHolders,
@@ -354,12 +354,16 @@ function fillPrice(trade: Trade): number | null {
 }
 
 /** What one more token costs now: the curve's marginal price, or the floor if that is higher. */
+/**
+ * What one more token costs now, before the floor share and fee. On an open
+ * curve the contract answers this itself (`spotPrice`: the highest of the
+ * curve, the floor and the auction's clearing price). Before settlement it is
+ * the curve's first price; once graduated, the last price the curve charged.
+ */
 function priceNow(m: Market): number {
-  const supply = BigInt(m.total_supply);
-  const curve = spotPrice(BigInt(m.curve_sold));
-  const floor = BigInt(m.floor_per_token);
-  if (m.phase === "commit" || m.phase === "reveal" || m.phase === "settle") return supply > 0n ? avax(floor) : avax(spotPrice(0n));
-  return avax(curve > floor ? curve : floor);
+  if (m.phase === "curve") return avax(m.spot_price);
+  if (m.phase === "graduated") return avax(spotPrice(BigInt(m.curve_sold)));
+  return avax(spotPrice(0n));
 }
 
 function toCoin({ account, market: m, trades, holders }: Raw): Coin {
@@ -562,8 +566,8 @@ function quoteFor(coin: Coin, side: "buy" | "sell" | "redeem", quantity: number)
   const supply = BigInt(m.total_supply);
   const spot = coin.priceQuote ?? 0;
   if (side === "buy") {
-    const total = buyQuote(sold, q, vault, supply);
-    const gross = (total * 100n) / 121n;
+    const gross = grossBuy(sold, q, vault, supply, BigInt(m.clearing_price));
+    const total = gross + gross / 5n + gross / 100n;
     const curveGross = curveCost(sold, q);
     const average = avax(gross) / quantity;
     return {

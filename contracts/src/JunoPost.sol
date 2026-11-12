@@ -12,8 +12,9 @@ import {CurveMath} from "./CurveMath.sol";
 ///     bid. Settlement fills the 200 auction tokens highest price first and
 ///     charges every winner the same clearing price (the lowest filled bid).
 ///  2. Bonding curve for the other 800 tokens (CurveMath). A buy pays the
-///     curve price (or the floor, if that is higher) + 20% into the floor
-///     vault + a 1% fee shared by the creator and the graduation escrow.
+///     highest of the curve price, the floor and the auction's clearing
+///     price (so the curve never undercuts the auction's winners), + 20% into
+///     the floor vault + a 1% fee shared by the creator and the graduation escrow.
 ///  3. Redeemable floor: any holder burns tokens for 99% of their pro-rata
 ///     share of the vault. The 1% left behind raises the floor for the rest.
 ///  4. Graduation: when the curve sells out, the curve reserve and the
@@ -334,11 +335,15 @@ contract JunoPost is ERC20, ReentrancyGuard {
     /* Curve and floor                                                     */
     /* ------------------------------------------------------------------ */
 
-    function _grossBuy(uint256 quantity) internal view returns (uint256) {
-        uint256 curve = CurveMath.rangeCost(curveSold, quantity, true);
+    /// @dev The highest of: the curve, the pro-rata floor, and the auction's clearing price.
+    /// Until the curve climbs past the clearing price, nobody buys cheaper than the auction's winners paid.
+    function _grossBuy(uint256 quantity) internal view returns (uint256 gross) {
+        gross = CurveMath.rangeCost(curveSold, quantity, true);
         uint256 supply = totalSupply();
         uint256 floor_ = supply == 0 ? 0 : (floorVault * quantity + supply - 1) / supply;
-        return curve > floor_ ? curve : floor_;
+        if (floor_ > gross) gross = floor_;
+        uint256 opening = clearingPrice * quantity;
+        if (opening > gross) gross = opening;
     }
 
     /// @notice What `quantity` tokens cost right now, everything included.
@@ -560,7 +565,8 @@ contract JunoPost is ERC20, ReentrancyGuard {
         v.curveReserve = curveReserve;
         v.graduationEscrow = graduationEscrow;
         v.creatorEarnings = creatorEarnings;
-        v.spotPrice = CurveMath.spot(curveSold);
+        // What the next token costs before the floor share and fee: curve, floor or clearing price.
+        v.spotPrice = settled && curveSold < CURVE_UNITS ? _grossBuy(1) : CurveMath.spot(curveSold);
         v.graduated = graduated;
         v.dare = dare;
         v.dareBond = dareBond;

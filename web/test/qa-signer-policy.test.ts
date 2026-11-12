@@ -4,7 +4,7 @@ import { encodeFunctionData } from 'viem';
 import { factoryAbi, postAbi } from '@juno/sdk';
 import { QA_BUDGET, qaRpc, reserveQaBudget, validateQaCall } from '../lib/qa-signer-policy';
 
-const factory = '0x44b3f36175d7426218a9fcac9ab5eb6f8444e758' as const;
+const factory = '0xac736951c75e849e7db40b333cc0dff2baf88539' as const;
 const post = '0x3AD60B725BdB66A663878F894386e7bD1801C94d' as const;
 const buy = encodeFunctionData({ abi: postAbi, functionName: 'buy', args: [2n] });
 

@@ -21,6 +21,9 @@ test('buy, sell and redeem quotes', () => {
   assert.equal(buyQuote(0n, 10n, vault, supply), 10n ** 14n + 10n ** 14n / 5n + 10n ** 14n / 100n);
   assert.equal(sellQuote(10n, 10n, vault, supply), 10n ** 14n - 10n ** 12n);
   assert.equal(redeemQuote(vault, supply, 10n), 10n ** 14n - 10n ** 12n);
+  // the auction's clearing price above both: the buy pays the clearing price
+  const clearing = 2n * 10n ** 13n;
+  assert.equal(buyQuote(0n, 10n, vault, supply, clearing), 2n * 10n ** 14n + (2n * 10n ** 14n) / 5n + (2n * 10n ** 14n) / 100n);
   assert.throws(() => curveCost(799n, 2n));
 });
 

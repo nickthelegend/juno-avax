@@ -24,8 +24,9 @@ contract CurveTest is JunoBase {
         (uint256 total, uint256 gross, uint256 toFloor, uint256 fee) = post.quoteBuy(25);
         uint256 curve = CurveMath.rangeCost(0, 25, true);
         uint256 floorPart = (post.floorVault() * 25 + post.totalSupply() - 1) / post.totalSupply();
-        // A buy never prices below the floor: right after a 20e12 auction the floor (10e12) is above the curve.
-        assertEq(gross, curve > floorPart ? curve : floorPart);
+        // Right after a 20e12 auction the clearing price is above both the floor (10e12) and the curve.
+        assertEq(gross, 25 * post.clearingPrice());
+        assertGt(gross, floorPart);
         assertGt(floorPart, curve);
         assertEq(toFloor, gross / 5);
         assertEq(fee, gross / 100);
@@ -39,6 +40,21 @@ contract CurveTest is JunoBase {
         assertEq(post.floorVault(), vault + toFloor);
         assertEq(post.curveReserve(), gross);
         assertEq(post.creatorEarnings(), fee / 2);
+        assertSolvent(post);
+    }
+
+    /// The curve never undercuts the auction: until it climbs past the clearing price, buys pay the clearing price.
+    function test_curveNeverUndercutsTheAuctionWinners() public {
+        uint256 clearing = post.clearingPrice();
+        assertEq(clearing, 20e12);
+        (, uint256 first,,) = post.quoteBuy(1);
+        assertEq(first, clearing);
+        assertEq(post.market().spotPrice, clearing);
+        // Far up the curve, where its price is above the clearing price, the curve prices the buy.
+        buy(post, eve, 700);
+        (, uint256 late,,) = post.quoteBuy(10);
+        assertEq(late, CurveMath.rangeCost(700, 10, true));
+        assertGt(late, 10 * clearing);
         assertSolvent(post);
     }
 

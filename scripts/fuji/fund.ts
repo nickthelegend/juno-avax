@@ -11,7 +11,7 @@ import { client, fuji, FUJI_RPC } from '@juno/sdk';
 import { account, readEnv } from './env.ts';
 
 const pub = client();
-const targets: Record<string, string> = { JUNO_MIRA_KEY: '0.02', JUNO_KAI_KEY: '0.05', JUNO_OTO_KEY: '0.035', JUNO_QA_KEY: '0.02' };
+const targets: Record<string, string> = { JUNO_MIRA_KEY: '0.022', JUNO_KAI_KEY: '0.07', JUNO_OTO_KEY: '0.045', JUNO_QA_KEY: '0.015' };
 
 async function send(from: ReturnType<typeof privateKeyToAccount>, to: `0x${string}`, value: bigint, label: string) {
   const w = createWalletClient({ account: from, chain: fuji, transport: http(FUJI_RPC) });
