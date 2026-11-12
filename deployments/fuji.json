@@ -3395,7 +3395,7 @@
           "blockMs": 636
         },
         {
-          "step": "shield",
+          "step": "shield (approve)",
           "hash": "0xaa4c776340cafd4dcc75e3bd7b9a43af4239e096368c93810d38b80fd58da8ec",
           "status": "success",
           "block": 60952498,
@@ -3403,7 +3403,7 @@
           "blockMs": 104
         },
         {
-          "step": "shield",
+          "step": "shield (deposit)",
           "hash": "0x2cebdc8adff04a1366509c9611c598a76e9074a45090c13d6aa40ff64d846ebb",
           "status": "success",
           "block": 60952500,
@@ -3497,7 +3497,7 @@
           "blockMs": 326
         },
         {
-          "step": "shield",
+          "step": "shield (approve)",
           "hash": "0xf890b83e202f22bf59baeba61a4fa69bbd57eac369200720cbdecd2cc365d388",
           "status": "success",
           "block": 60952361,
@@ -3505,7 +3505,7 @@
           "blockMs": 150
         },
         {
-          "step": "shield",
+          "step": "shield (deposit)",
           "hash": "0x9f323374ada389ba03d04dd54e64e93098772b9f9514ab4058a3544d667a1846",
           "status": "success",
           "block": 60952365,
@@ -3521,7 +3521,7 @@
       "result": "complete"
     },
     "local-1440-first": {
-      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125…, approve 0x46a2fade…).",
+      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125\u2026, approve 0x46a2fade\u2026).",
       "url": "http://127.0.0.1:5391",
       "width": 1440,
       "slug": "judge-11121449",

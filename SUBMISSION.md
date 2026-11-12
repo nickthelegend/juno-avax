@@ -22,7 +22,11 @@ Juno is a social app where every post is a coin, built so that neither happens.
 - **Dares.** A creator can stake AVAX on a promise. Holders vote on the proof. If the creator flakes, the bond goes into the holders' floor.
 - **Hide your bag.** Every post coin is a public ERC-20, so whale-watchers and copy-trading bots can read exactly who holds how much. Juno adds a private vault built on Ava Labs' eERC (EncryptedERC, converter mode). A holder signs once to open a key on their device, registers it with a zero-knowledge proof built in the browser, and shields any post coin into an encrypted balance. From there they can send part of it privately to another holder and unshield to sell or redeem. The public sees the vault, not the holder. Transfer amounts are hidden from everyone except the two parties and an auditor, whose key every proof must encrypt to. The app shows all three views side by side, and says plainly what stays public: the amounts shielded and unshielded.
 
-It runs on the Avalanche Fuji C-Chain end to end: a JunoFactory deploys one contract per post (the ERC-20, the auction, the curve, the vault and the dare). The web app reads everything from the contracts with no server or indexer, signs with the person's own wallet (Core first), simulates every call before the wallet opens, and shows how long Avalanche took to make each transaction final — measured from broadcast to the block's own millisecond timestamp.
+- **Try it with nothing installed.** A judge with an empty browser taps *Juno wallet* and gets 0.008 test AVAX from Juno's own on-chain gas station (once per new wallet, signed request, daily caps on-chain) — enough to launch a post, win its sealed-bid opening, buy, sell, redeem and hide the bag. This path ran on the hosted app in a fresh browser at desktop and phone width, 11/11 transactions each.
+- **Ask Juno AI.** On any coin, a Claude agent explains how the opening cleared, where the floor sits and who holds it, from live Fuji reads shown as tool chips. It reads; it never trades.
+- **Tip the creator privately.** Holders can send the creator part of their bag through the eERC vault; only the two of them and the auditor see the amount.
+
+It runs on the Avalanche Fuji C-Chain end to end: a JunoFactory deploys one contract per post (the ERC-20, the auction, the curve, the vault and the dare). The app (web, and iOS/Android through Expo) reads everything from the contracts with no indexer, signs with the person's own wallet (Core first) or the in-app Juno wallet, simulates every call before the wallet opens, and shows how long Avalanche took to make each transaction final — measured from broadcast to the block's own millisecond timestamp.
 
 Live on Fuji:
 - the factory (source verified on Snowtrace) and the eERC vault;
@@ -36,8 +40,10 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 
 - **Avalanche C-Chain (Fuji, 43113):** Solidity 0.8.28 contracts (Foundry, OpenZeppelin ERC-20 and ReentrancyGuard), deployed with viem; factory source verified on Snowtrace (Routescan verifier).
 - **Avalanche finality in the product:** every trade shows its measured time to a final block (Granite block headers' `timestampMilliseconds`) and to a readable receipt; the app reads Fuji's live block cadence from headers.
-- **Wallets:** EIP-6963 discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain` for Fuji.
-- **App:** Expo Router (React Native for web), static export; viem for reads and calldata; `@juno/sdk` mirrors the contract maths.
+- **Wallets:** EIP-6963 discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain` for Fuji; the Juno wallet (device key) for a zero-setup start.
+- **JunoGasStation (Fuji):** starter AVAX for brand-new wallets, signature-bound, once per wallet, daily and per-requester caps enforced on-chain; relayed by Juno's API on Vercel. 21 Forge tests + a judge-path test; 8 live API tests incl. a real drip.
+- **Juno AI:** `claude-haiku-5-5` via Juno's API (key server-side only) with five read-only tools over live Fuji; 6 live tests incl. a real answer.
+- **App:** Expo Router (React Native for web, Expo SDK 58), static export on Vercel and the same app in Expo Go on iOS/Android; viem for reads and calldata; `@juno/sdk` mirrors the contract maths.
 - **eERC (bonus):** Ava Labs' EncryptedERC ([ava-labs/EncryptedERC@8dc98cd](https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1)), unchanged, in converter mode with production verifiers and an auditor. Our client crypto (BabyJubJub ElGamal, Poseidon ciphertexts, proof inputs) is in `sdk/src/eerc.ts`, and Groth16 proofs are built in the browser with snarkjs. 26 checks run on Anvil with real proofs, including replayed, tampered, wrong-sender and wrong-chain attacks.
 - **Mainnet readiness:** `scripts/mainnet/deploy.ts` (dry run by default; a guarded broadcast for Nick to run) and `scripts/deploy-mainnet.md`. Not deployed.
 - **ICM:** probed only. One Teleporter message from Fuji C-Chain reached Echo through the public relayer, but no ICM/ICTT feature ships, so none is claimed. No own L1.
@@ -49,6 +55,9 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 - Live app: https://juno-avax.vercel.app (Fuji testnet)
 - Demo video (≤ 3 min): (to record)
 - Slides: `docs/SLIDES.md`
+- Juno API health (gas station balance, AI configured): https://juno-avax-api.vercel.app/api/health
+- JunoGasStation (source verified): https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a
+- A judge-path drip: https://testnet.snowtrace.io/tx/0x3e9c7e612eb724c984b427cd09da5eb133328973b5a9f62fb2fd9f817c72c14a
 - JunoFactory on Snowtrace: https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539
 - Factory deploy tx: https://testnet.snowtrace.io/tx/0xdc72b603c6ab6c4f80aa2db93ad74918216b89a6e21ce6a52cc5c020db712d5c
 - eERC vault (EncryptedERC, converter mode): https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac
@@ -61,7 +70,8 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 
 ## AI tools used
 
-- **Claude Code**: wrote the Solidity contracts and tests, the SDK (including the eERC client crypto), the Fuji, eERC, mainnet and QA scripts, the EVM port of the app, the Hide-your-bag screen and the docs, under human direction. The eERC contracts and circuits are Ava Labs' own, used unchanged.
+- **Claude Code**: wrote the Solidity contracts and tests, the SDK (including the eERC client crypto), the Fuji, eERC, mainnet and QA scripts, the EVM port of the app, the Hide-your-bag screen, the gas station, the Juno API, the Juno wallet and the docs, under human direction.
+- **Claude (claude-haiku-5-5)**: runs inside the product as Juno AI. The eERC contracts and circuits are Ava Labs' own, used unchanged.
 - **Codex** — used on the earlier Juno builds whose app this reuses.
 - **ChatGPT images** — the 3D object kit and post art (generated for the earlier Juno builds and reused).
 

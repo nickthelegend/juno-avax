@@ -6,26 +6,63 @@ Launchpads reward whoever gets the first transaction in, and leave holders with 
 
 And because every post coin is a public ERC-20, holders can **hide their bag**: shield it into an eERC vault (Ava Labs' EncryptedERC), move it privately, and unshield to sell. Whales and copy-trade bots see the vault, not you.
 
-Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace). eERC vault: [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac). Version **v2.0** (see [CHANGELOG.md](CHANGELOG.md)).
+Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace). eERC vault: [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac). Gas station: [`0x45fdcdf64f6fa312b02b98ad248461c6a02e722a`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a). Version **v2.1** (see [CHANGELOG.md](CHANGELOG.md)).
 
-## Try it
+## Try it with nothing installed
 
-Live app: **https://juno-avax.vercel.app** (Fuji testnet; static export of `e59d313`). To run it locally (Node 20+, pnpm 10):
+Live app: **https://juno-avax.vercel.app** (Fuji testnet). You need no wallet extension and no test AVAX:
+
+1. Open **Profile → Connect wallet → Juno wallet · Use**. One tap makes a Fuji test key in this browser and gets it **0.008 test AVAX** from [`JunoGasStation`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a) (source verified): enough for a sealed bid's 0.005 escrow (most of it comes back) and a handful of trades.
+2. **Post** (the + tab): pick art, name it, Launch. You are now in your post's one-minute sealed-bid opening: **Place sealed bid**, then **Reveal my bid** in the second minute, **Settle the auction**, and **Claim** the unused escrow.
+3. **Buy**, **Sell** and **Redeem against the floor** from the coin page.
+4. **Hide your bag**: sign once (no transaction), **Create private bag** (a registration proof built in the browser), **Shield** some coins. The public view shows the vault, not you.
+5. **Ask Juno AI** on any coin page: "How did the opening clear?" answers from live Fuji reads, and each read shows as a chip.
+
+This exact path ran on the hosted app in a fresh browser profile at 1440 px and at 375 px, 11/11 transactions each (table below), and on the iOS app in the Simulator.
+
+Core and MetaMask still work as before (the sheet lists them first). The Juno wallet keeps its key in this browser's localStorage, or the phone's keychain in the native app; it is a test-AVAX convenience, not a place for real funds.
+
+## Run it locally
+
+Node 20+, pnpm 10:
 
 ```bash
 pnpm install
 cp web/.env.example web/.env.local          # public factory address only
 pnpm web:export                             # static export in web/dist
 pnpm web:serve                              # http://localhost:5391
-pnpm test                                   # forge (70) + SDK (13) + web (13) + eERC on Anvil (26 checks)
+pnpm test                                   # forge (93) + SDK (15) + web (13) + eERC on Anvil (26 checks)
+cd api && pnpm test                         # Juno API on live Fuji (14, incl. one real drip and one real model answer)
 ```
 
 1. Open `/social` — the feed reads every post from Fuji, with prices, floors and who bought.
 2. Open a post (PILE-IN is graduated, ROOFTOP's dare was accepted, NIGHT-SWIM's dare flaked into the floor) — chart, holders, the opening auction's clearing price, the floor per token, the dare's vote.
 3. Tap **Buy** — the sheet quotes from the contract (`quoteBuy`) and shows the fee and what the buy adds to the floor. Nothing is sent until your wallet approves.
-4. **Connect** Core, MetaMask or any EIP-6963 wallet; the app asks it to switch to Fuji (adding the network if needed). Get test AVAX from the [Core faucet](https://core.app/tools/testnet-faucet/?subnet=c&token=c).
+4. **Connect** Core, MetaMask or any EIP-6963 wallet (the app asks it to switch to Fuji, adding the network if needed), or use a Juno wallet. A brand-new empty wallet of either kind gets its starter AVAX with **Get free test AVAX** on the Profile card; after that, the [Core faucet](https://core.app/tools/testnet-faucet/?subnet=c&token=c).
 5. **Post** (the + tab): pick art, name it, launch. Then you have one minute to place a sealed bid, one to reveal, and anyone can settle. After each transaction the app shows how long Avalanche took to make it final.
 6. **Hide your bag**: on any coin page tap *Hide your bag* (or open `/vault`). *Public view* shows what anyone can read. *Your bag* asks for one signature (not a transaction), then registers your key with a proof built in the browser, and lets you shield, send privately and unshield. *Auditor* shows transfer amounts only to the auditor's wallet.
+
+## Zero-setup start: JunoGasStation (v2.1)
+
+A judge with an empty wallet could not bid (a sealed bid escrows 0.005 AVAX) or even launch a post. Juno now pays a **starter balance** to brand-new wallets, with the rules kept on-chain where anyone can audit them:
+
+- [`contracts/src/JunoGasStation.sol`](contracts/src/JunoGasStation.sol) (ported from our Kumi project's KumiGasStation; Juno's own instance and keys). It pays **0.008 AVAX once per wallet**, only to a wallet that **signed this exact request** (station, chain 43113, wallet, deadline ≤ 1 h), that **holds no AVAX** and **is not a contract**, and only while **today's cap (12)** and the **per-requester cap (6 a day, keyed by an HMAC of the requester's IP; the IP never leaves the server)** have room. Only Juno's relayer key can call `drip`.
+- **Juno API** (`api/`, Vercel project `juno-avax-api`): `POST /api/gas` checks the request off-chain first (readable errors, per-IP limiter), then relays it; `GET /api/health` reports the station's live balance and room. Keys are Vercel env vars piped from the gitignored `.env`, never printed.
+- **Juno wallet** (`web/lib/local-wallet.ts`): listed in the sign-in sheet next to Core and MetaMask. One tap creates the key and requests the drip. Any other empty wallet gets the same one-tap **Get free test AVAX** on the Profile card.
+- **Funding:** 0.05 AVAX from Juno's own test account kai, then 0.1 AVAX from the Avalanche funding hub (`avax/.hub/fund.sh`, logged in its ledger). Every drip is a `Dripped` event on the station.
+- **Tests:** 21 Forge tests (forged, moved, replayed, malleated and expired signatures, funded wallets, contracts, both caps, relayer rotation) plus a judge-path test: one drip covers launch, sealed bid, reveal, settle, claim, buy, sell and redeem. The API's 8 live tests include one real drip.
+
+## Juno AI (v2.1)
+
+**Ask Juno AI** on every coin page: a `claude-haiku-5-5` agent on Juno's API (`POST /api/ask`, key in Vercel env only) explains the coin from live Fuji reads. Its tools are read-only: every coin, one coin's market (phase, clearing price, curve, floor vault and floor per token, creator earnings, dare and vote), the sealed-bid opening (each bid, revealed or sealed, tokens won, unclaimed escrow), holders (the eERC vault labelled "private bags") and recent fills. Each tool call shows as a chip above the answer. It cannot sign or trade and does not give trading advice. No wallet is needed to ask; it is rate limited per IP and per instance and says "Setup required" without a key. Six live tests check each tool against a direct chain read and run one real answer.
+
+## Tip the creator privately (v2.1)
+
+When a coin's creator has a private bag, the coin page shows **Tip the creator privately**. It opens the vault with the coin and the creator picked and the form on *Send privately* (once the coin is in your bag): an eERC transfer proof built in the browser moves part of your bag to theirs. The public sees "a private transfer happened"; only you, the creator and the auditor can read the amount. It uses the same vault and proofs as Hide your bag; the new part is the flow from the coin page.
+
+## The phone app (v2.1)
+
+`web/` is one Expo app for web, iOS and Android. In v2.1 it moved to **Expo SDK 58** and runs in Expo Go: on a phone the only wallet is the Juno wallet (key in the keychain via `expo-secure-store`), with the same one-tap starter AVAX. In the iOS Simulator (iPhone 17 Pro) the native app created a wallet, got its drip, launched `iphone-first`, placed a sealed bid, settled, bought 5 and sold 5, and Juno AI answered with tool chips (`deployments/fuji.json` → `iosRun`, screenshots `orchestration/shots/avax-juno/9round/ios/ios-*.png`). Fixes found there: bid salts kept in the keychain so a reveal survives a reload (the first native bid was lost that way and refunded minus 1%), seeded art served from the hosted app, the art grid's cell heights, sheet drags under gesture-handler 3, and the Ask sheet's placement. **Not on native:** Hide your bag (the eERC prover runs in the browser only) and Core mobile (WalletConnect is not wired).
 
 ## How a post works
 
@@ -47,6 +84,7 @@ Payouts that can wait are pulled (refunds, creator earnings); sells and redempti
 | **Fuji C-Chain contracts, Core wallet** | **Used.** Solidity on C-Chain, factory source verified on Snowtrace, EIP-6963 discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain`. | Factory [`0xac736951…`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) |
 | **Mainnet readiness** | **Ready, not deployed.** `scripts/mainnet/deploy.ts` runs dry by default: it checks chain 43114 and reads gas and cost from mainnet (about 0.037 AVAX for the factory, 0.104 AVAX with the vault on 12 Nov). A broadcast needs a typed confirmation and Nick's own key. Runbook: [scripts/deploy-mainnet.md](scripts/deploy-mainnet.md). | No mainnet transaction exists |
 | **ICM / ICTT** | **Probed, not shipped.** One Teleporter message from Fuji C-Chain to Echo was delivered by the public relayer ([0xe47dac77…](https://testnet.snowtrace.io/tx/0xe47dac771067e3a763a85e94608f9610029e40db69f926aba38c3240e36a3efc)), so ICTT bridging of graduated coins is feasible. No product feature uses it yet, so it is not claimed. | `deployments/fuji.json` → `icmProbe` |
+| **Zero-setup start (JunoGasStation)** | **Used, live on Fuji.** Starter AVAX for brand-new wallets with on-chain caps; the Juno wallet needs nothing installed. Not an Avalanche-only primitive, but it makes the Fuji app usable by anyone. | Station [`0x45fdcdf6…`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a) (verified) · hosted judge runs below |
 | Own L1 | Not used. | — |
 
 ### Hide your bag: what is private, and what is not
@@ -59,6 +97,29 @@ Payouts that can wait are pulled (refunds, creator earnings); sells and redempti
 - **Keys:** one wallet signature over a fixed message (naming the account and chain 43113) derives the holder's BabyJubJub key on the device. Juno never stores it. RFC 6979 wallets (Core, MetaMask) sign deterministically, so the same wallet always reopens the same bag.
 
 ## Live on Fuji
+
+### Zero-setup judge path on the hosted app (v2.1)
+
+Driven by `scripts/qa-hosted-judge.ts` against **https://juno-avax.vercel.app** in headless Chrome with a fresh browser profile: no extension, no QA signer, no key from this repo. The page made its own Juno wallet; every hash below was read from the page's own `eth_sendRawTransaction` calls and confirmed on Fuji. 0 console errors in both runs.
+
+| Step | 1440 px (wallet [`0x14D1…976b`](https://testnet.snowtrace.io/address/0x14D1BB5Ed45f4Dff3A03976dD4A8feD616dD976b)) | 375 px (wallet [`0x1ffa…6E04`](https://testnet.snowtrace.io/address/0x1ffaC8257700d5618Ca600FFA0b05fA5Ea306E04)) |
+| --- | --- | --- |
+| Starter AVAX (JunoGasStation `drip`, relayed by Juno API) | [0x3e9c7e61…](https://testnet.snowtrace.io/tx/0x3e9c7e612eb724c984b427cd09da5eb133328973b5a9f62fb2fd9f817c72c14a) | [0x8a371148…](https://testnet.snowtrace.io/tx/0x8a371148d21f1e43e60dccd0c3d9d5014f02b37ff1f78f1c6e328f39f997e81c) |
+| Launch post | [0x268dc3cf…](https://testnet.snowtrace.io/tx/0x268dc3cf7a80afa3395e02f192ffd0e6e3fc59c9fad9c77466aaecd3a664d1e1) (`judge-11121457`) | [0x97cdf3d6…](https://testnet.snowtrace.io/tx/0x97cdf3d65337c6be9c9e3007fdc41206f3f4a799202f9b62b3c0d464acd3d820) (`judge-11121503`) |
+| Sealed bid | [0xd0b43ae3…](https://testnet.snowtrace.io/tx/0xd0b43ae3114e689774d44c0cb312714ec9d82c77dcab086369c7cf64168d3bfa) | [0x94611c21…](https://testnet.snowtrace.io/tx/0x94611c21e1bbf53c1bf81d45ce56b89df257558935176c8d4bcdddf3ebb70b87) |
+| Reveal | [0x4d5cf9e5…](https://testnet.snowtrace.io/tx/0x4d5cf9e5fc00f37202cd6cb3c021417e58cb6cce9dccac3136d2b1438dd0ee86) | [0xf28915bd…](https://testnet.snowtrace.io/tx/0xf28915bd500344c5b6d1f98dd51906403f3f843e77af18a0a4f3d5964e1512aa) |
+| Settle | [0x7dfd295a…](https://testnet.snowtrace.io/tx/0x7dfd295adad938625831baf65317b1f70e6f1cdf1f04cbbb37aa4e05f131199f) | [0x58ba485e…](https://testnet.snowtrace.io/tx/0x58ba485e4bdc14beedde0131cc82a8ea821a2b328d37d6e0d1de94c9d1ede46f) |
+| Claim unused escrow | [0x813ef30d…](https://testnet.snowtrace.io/tx/0x813ef30d7760b790cd465738ff21283e2c157d1747e3e88c8babac78ae319a12) | [0x6c99d6a6…](https://testnet.snowtrace.io/tx/0x6c99d6a6d1e479fc03d019a4fbc277cb33b04556b993749b64ca1b679700c627) |
+| Buy 5 | [0x47a1d2f6…](https://testnet.snowtrace.io/tx/0x47a1d2f619fa94733889c171ebfa27cda9f66c42c58bf5c6c9cc8c35d5f72563) | [0x5767eed4…](https://testnet.snowtrace.io/tx/0x5767eed4ff32fc570cfd9acc53b31beadf99614c32a26e80f1e98580149b8336) |
+| Sell 2 | [0x25387dc6…](https://testnet.snowtrace.io/tx/0x25387dc645937e18a0fe8162b10f271f6dfbb7620e77d9fb2134b01f7c3c79be) | [0x5fb58d9e…](https://testnet.snowtrace.io/tx/0x5fb58d9ef2bb44c9bb79d837c0ab8fddcb40c5e34e5d5083ac54bd43e665920e) |
+| Redeem 1 against the floor | [0xd1deccc2…](https://testnet.snowtrace.io/tx/0xd1deccc2422f40a4ee0d9d64e1a05c873d6ed7d315c9cfe727604d29c6d3ec6c) | [0x8cee145f…](https://testnet.snowtrace.io/tx/0x8cee145f2e3e524bb29c19c5223c94f1b24095253bf586a56c944699014996f5) |
+| Hide your bag: register (browser proof) | [0x48ed1190…](https://testnet.snowtrace.io/tx/0x48ed1190538c6281c2bb583058ccb1052c9b68e45a03941196e5705212966a69) | [0x3b070928…](https://testnet.snowtrace.io/tx/0x3b0709283c36e73154897617cb801175f704f812890d64b2d3c2c09939325a16) |
+| Shield 10: approve | [0xf890b83e…](https://testnet.snowtrace.io/tx/0xf890b83e202f22bf59baeba61a4fa69bbd57eac369200720cbdecd2cc365d388) | [0xaa4c7763…](https://testnet.snowtrace.io/tx/0xaa4c776340cafd4dcc75e3bd7b9a43af4239e096368c93810d38b80fd58da8ec) |
+| Shield 10: deposit | [0x9f323374…](https://testnet.snowtrace.io/tx/0x9f323374ada389ba03d04dd54e64e93098772b9f9514ab4058a3544d667a1846) | [0x2cebdc8a…](https://testnet.snowtrace.io/tx/0x2cebdc8adff04a1366509c9611c598a76e9074a45090c13d6aa40ff64d846ebb) |
+
+Each wallet finished with about 0.0075 AVAX of its 0.008 drip (the escrow came back, and Fuji gas is ~160 wei). JunoGasStation: deployed in [0x2403c999…](https://testnet.snowtrace.io/tx/0x2403c999ef7ec2b0fd3bb8d8eb41e1001702efbe84d765f76028c63c2b004dde), funded in [0xcf80e836…](https://testnet.snowtrace.io/tx/0xcf80e836482e331deed5d0fee26b53b927edc0e5039f324ab9588869b8c7eae2) (kai, 0.05) and [0x3fb7d5e7…](https://testnet.snowtrace.io/tx/0x3fb7d5e7f85785e30d38d4b57af1c51e471ee05ac1f163db413c1a93f8106bbc) (funding hub, 0.1); per-requester cap raised to 6 in [0x608c8f1c…](https://testnet.snowtrace.io/tx/0x608c8f1cfcdcfe98b5320867e9543064c0d582ed5431b71da95944198685238a).
+
+An earlier run against a local copy of the export got the drip and 10 transactions through, then the shield's deposit was refused in simulation by a public RPC node that had not yet seen the approval from the same batch. The wallet now retries a reasonless refusal right after a step it just confirmed; both hosted runs above passed with that fix.
 
 <!-- EVIDENCE:START -->
 ### Contracts
@@ -331,6 +392,7 @@ All of the above is in [deployments/fuji.json](deployments/fuji.json), with gas 
 The Juno Expo Router app, exported as a static web build (`expo export --platform web`), served by any static host with a single-page fallback (`web/vercel.web.json`).
 
 - **Reads:** `web/lib/api.ts` reads the factory's `posts()`, then each post's `market()`, `trades()` and `holders()` through `@juno/sdk` (viem, JSON-RPC batched, two public Fuji RPCs with fallback). Buy quotes come from the contract's `quoteBuy`; sell and redemption quotes from the SDK's mirror of the contract maths.
+- **Wallets:** browser wallets via EIP-6963 (`lib/browser-wallet.web.ts`), and the Juno wallet (`lib/local-wallet.ts`, key in localStorage on web and the keychain on phones) on every platform. Starter AVAX: `lib/gas.ts`.
 - **Writes:** `web/lib/wallet.tsx` encodes each call, **simulates it against Fuji with `eth_call` first** (so a refusal shows the contract's reason, mapped to plain words, before the wallet opens), sends it through the person's wallet, and follows it to a receipt, timing it (`lib/tx-status.ts`, `lib/finality.ts`).
 - **Screens:** feed (bump order: live auctions first, then latest trade), reels, coin page (chart, auction card with countdown and phase track, floor, graduation, dare card with proof/vote/finalize, activity, holders, details), trade sheet (buy / sell / redeem with a numpad and live quote), launch flow, profile with positions and P&L from the fill logs, trader pages and a leaderboard.
 - **Private bags:** `web/lib/vault.ts` reads the vault (token list, the vault's ERC-20 balance per coin, Register/Deposit/Withdraw/PrivateTransfer logs in 49,000-block windows, each bag's ciphertext). `web/lib/prover.web.ts` loads the snarkjs browser build and the circuits from `/eerc/`, which `scripts/copy-eerc-assets.mjs` copies from the pinned submodule at export time with a SHA256SUMS file.
@@ -340,10 +402,12 @@ The Juno Expo Router app, exported as a static web build (`expo export --platfor
 ## Repository
 
 ```
-contracts/   Foundry: JunoFactory, JunoPost, CurveMath + 70 tests (auction, curve, dare, factory, attacks, invariant)
+contracts/   Foundry: JunoFactory, JunoPost, CurveMath, JunoGasStation + 93 tests (auction, curve, dare, factory, attacks,
+             invariant, gas station, judge path)
              lib/EncryptedERC: Ava Labs' eERC, pinned submodule (Ecosystem License), built by FOUNDRY_PROFILE=eerc
 sdk/         @juno/sdk: viem reads, ABIs, the contract maths in TypeScript; @juno/sdk/eerc: eERC client crypto
-web/         the Juno app (Expo Router, static web export)
+web/         the Juno app (Expo Router: static web export, and iOS/Android in Expo Go)
+api/         Juno API on Vercel: /api/gas (JunoGasStation relayer), /api/ask (Juno AI), /api/health
 scripts/     Fuji keys, funding, deploy, seeding, the web QA flows, evidence tables
              eerc/ (vault deploy, Anvil end-to-end), mainnet/ (guarded deploy), icm/ (relayer probe)
 deployments/ fuji.json: addresses and every recorded transaction
@@ -370,6 +434,8 @@ Juno is our own product and has been built on several chains before. Everything 
 The app in `web/` was imported unchanged from `juno-near/packages/app` in commit `29c2ade` (its screens, theme, fonts, components and art). The mechanics (auction, floor, dare) were designed in `juno-near`, in Rust.
 
 **Built for this Speedrun (Nov 12, 2026, from commit `9ba6f0e`):** the Solidity contracts and their 70 tests (a new implementation of the mechanics for the EVM, with changes: bids bound to post/chain/bidder, curve buys never below the auction's clearing price, graduation into the floor, failed dare bonds into the floor, dust sweep, a solvency invariant), the viem SDK, the Fuji deployment and 50 seeded transactions, the move of the app from NEAR to EVM (reads, wallet, simulation, QA signer), measured finality in the UI, web controls for refunds and the dare (proof, vote, finalize), the live block-cadence readout, and the web QA flow. To see only this work: `git diff 29c2ade..HEAD`.
+
+**v2.1 (Nov 12–13, from tag `v2.0`):** JunoGasStation and its Juno API relayer, the Juno wallet, Juno AI, the creator tip flow, the Expo SDK 58 move and the native fixes, hosted judge-path QA. `git log v2.0..HEAD`.
 
 **v2.0 (same day, from tag `v1.0`):** the eERC vault (Hide your bag) with its SDK, Anvil test, Fuji deployment, web screen and browser proving; the mainnet deploy script and runbook; the ICM probe; QA runs at 1440 and 375; three more seeded posts; the JSON-RPC batch fix. `git log v1.0..HEAD`.
 

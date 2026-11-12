@@ -2,6 +2,24 @@
 
 All notable changes to Juno on Avalanche. Versions are local git tags. Nothing is pushed by the build agent.
 
+## v2.1 — 2026-11-13
+
+### Added
+- **Zero-setup start.** `JunoGasStation` on Fuji ([`0x45fdcdf6…`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a), source verified): 0.008 AVAX once per brand-new wallet that signed the request, with a daily cap and a per-requester cap on-chain. 21 Forge tests and a judge-path test.
+- **Juno API** (`api/`, Vercel `juno-avax-api`): `/api/gas` relays signed gas requests, `/api/ask` runs Juno AI, `/api/health`. 14 live tests.
+- **Juno wallet**: a Fuji test key made on the device (localStorage on web, keychain on phones), listed in the sign-in sheet; one tap creates it and gets the starter AVAX. **Get free test AVAX** on the Profile card for any new empty wallet.
+- **Juno AI**: Ask Juno AI on coin pages, `claude-haiku-5-5` with read-only Fuji tools shown as chips.
+- **Tip the creator privately**: coin page row → vault with the creator picked and Send privately (eERC transfer).
+- **Native app**: Expo SDK 58, runs in Expo Go; verified in the iOS Simulator with real Fuji transactions.
+- `scripts/qa-hosted-judge.ts`: the zero-setup path on the hosted app; 11/11 at 1440 and 375.
+
+### Fixed
+- A shield right after its approval could be refused in simulation by a public RPC node a block behind; the wallet retries a reasonless refusal after a step it just confirmed.
+- Phone: sealed-bid salts survive a reload (keychain); seeded art loads from the hosted app; the art grid had zero-height cells; sheet drags under gesture-handler 3; the Ask sheet covered only the scroll view.
+- The trade sheet kept the last receipt when you switched Buy/Sell/Redeem.
+- The feed card's auction figure ("200 for sale · sealed bids") overflowed its row on phones; it now reads "200 / for sale".
+- "Not enough test AVAX" now points at the one-tap starter AVAX.
+
 ## v2.0 — 2026-11-12
 
 ### Added

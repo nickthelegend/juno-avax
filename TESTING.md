@@ -1,23 +1,36 @@
 # Testing
 
-Recorded on 12 November 2026 (v2.0). Every number below came from running the command next to it.
+Recorded on 12 November 2026 (v2.1; v2.0 rows unchanged unless noted). Every number below came from running the command next to it.
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Contracts (Foundry, local EVM) | `cd contracts && forge test` | **70 passed, 0 failed** (7 suites) |
+| Contracts (Foundry, local EVM) | `cd contracts && forge test` | **93 passed, 0 failed** (9 suites: the v2.0 70 + JunoGasStation 21 + judge path 2) |
 | eERC end to end (Anvil, real proofs, production verifiers) | `pnpm --filter @juno/scripts test:eerc` | **26/26 checks passed**, 21 transactions |
-| SDK maths, commitment and eERC client crypto | `pnpm --filter @juno/sdk test` | **13 passed, 0 failed** (4 maths + 9 eERC) |
+| SDK maths, commitment, eERC client crypto, gas request | `pnpm --filter @juno/sdk test` | **15 passed, 0 failed** (4 maths + 9 eERC + 2 gas, one against the deployed station on Fuji) |
+| Juno API on live Fuji (gas sponsor, Juno AI) | `cd api && pnpm test` | **14 passed, 0 failed** (8 gas incl. one real 0.008 AVAX drip; 6 Juno AI incl. one real `claude-haiku-5-5` answer) |
+| Zero-setup judge path on the hosted app, 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-hosted-judge.ts` (and 375) | **11/11 txs each**, 0 console errors; `deployments/fuji.json` → `judgeRuns` |
+| Native app in the iOS Simulator (Expo Go 58) | manual, Metro on port 8092 | drip, launch, bid, settle, buy, sell confirmed on Fuji; `deployments/fuji.json` → `iosRun` |
 | Web unit tests (accounting, price window, QA signer policy incl. vault rules) | `pnpm --filter juno-avax-web test` | **13 passed, 0 failed** |
 | Web typecheck | `cd web && npx tsc --noEmit` | 0 errors |
 | Web static export (hostable) | `pnpm web:export` | builds `web/dist` with `/eerc/` circuits |
 | Fuji seeding (live chain) | `scripts/fuji/seed*.ts`, `scripts/eerc/fuji.ts` | `deployments/fuji.json` → `seed`, `eerc` |
 | Full post flow through the web app at 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-flow.ts` (and 375) | `deployments/fuji.json` → `qaRuns` |
 | Hide your bag through the web app at 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-vault.ts` (and 375) | `deployments/fuji.json` → `qaVaultRuns` |
-| Route screenshots at 1440 and 375 | `node scripts/shots.mjs` | `orchestration/shots/avax-juno/v2/` |
+| Route screenshots at 1440 and 375 | `node scripts/shots.mjs` | v2.1: 34/34, `orchestration/shots/avax-juno/9round/after/` (before: `9round/before/`) |
 
 No test that touches a chain uses a mock: Foundry runs the real contracts on its local EVM, the eERC test runs Ava Labs' contracts and real Groth16 proofs on Anvil, and the seeding and web flows run on Avalanche Fuji.
 
-## Contracts — 70 tests
+## v2.1 additions
+
+- **`JunoGasStation.t.sol` (21):** a new wallet is paid once and the event is emitted; only the relayer may call; a signature from another key, moved to another wallet, made for another station, over a changed deadline, malformed, or high-s malleated is refused (plus a fuzz test that only the wallet's own key works); expired and too-far deadlines; a second drip; a wallet that already holds AVAX; an address with code; the per-requester cap (another requester still works) and the daily cap (resets the next day); an empty station fails loudly; owner-only configure and withdraw; bad configs refused; a rotated-out relayer loses access.
+- **`JudgePath.t.sol` (2):** one 0.008 AVAX drip lets a brand-new wallet launch a post, commit a sealed bid, reveal, settle, claim its refund, buy 5, sell 2 and redeem 2 with AVAX left over, and the post stays solvent; a wallet cannot be dripped twice even after spending everything.
+- **`sdk/test/gas.test.ts` (2):** the app's digest equals `JunoGasStation.digest` read from Fuji; a raw-digest signature recovers to the wallet.
+- **`api/test/gas.test.ts` (8, live Fuji):** Setup required without keys; malformed input refused before any chain read; forged and moved signatures (401); expired and far deadlines; a funded wallet is not new (409); **one real drip** to a fresh wallet, checked by its `Dripped` event and balance, then refused the second time; the per-IP limiter; the station's on-chain room.
+- **`api/test/ask.test.ts` (6, live Fuji):** `get_coin`, `get_auction`, `get_holders`, `get_trades` agree with direct reads of PILE-IN; a non-post address is refused; Setup required and bad input; **one real Juno AI answer** that used tools.
+- **Hosted judge path (`scripts/qa-hosted-judge.ts`):** a fresh browser profile on https://juno-avax.vercel.app: Profile → Connect → Juno wallet (drip in the same tap) → launch → bid → reveal → settle → claim → buy 5 → sell 2 → redeem 1 → Hide your bag (register with a browser proof, approve, deposit). 11/11 at 1440 and 11/11 at 375, 0 console errors. Screenshots: `orchestration/shots/avax-juno/9round/judge-1440/`, `judge-375/`.
+- **iOS Simulator:** Expo Go 58 on an iPhone 17 Pro. Screenshots `orchestration/shots/avax-juno/9round/ios/ios-*.png`: landing, feed, connect sheet, getting gas, funded, post form, launch final, auction, settle, buy quote and receipt, sell receipt, Snowtrace, coin rows with Ask and Tip, Juno AI answer. Bugs found and fixed there are listed in the CHANGELOG.
+
+## Contracts — v2.0's 70 tests
 
 | File | Tests | What it proves |
 | --- | ---: | --- |

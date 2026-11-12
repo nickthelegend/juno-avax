@@ -85,6 +85,9 @@ Visual: /vault with the Public view (PILE-IN 63% of supply in private bags), the
 - Every seeded transaction is recorded with its timing (README tables).
 - Driven through the web app in headless Chrome at 1440 px and at 375 px: launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim. Then register, shield, send privately, unshield and the auditor view.
 
+- **Try it with nothing installed (v2.1):** a new browser taps *Juno wallet* and gets 0.008 test AVAX from JunoGasStation (once per wallet, caps on-chain). That path ran on the hosted app at 1440 and 375, 11/11 transactions each. The same app runs on iOS in Expo Go.
+- **Ask Juno AI:** a Claude agent explains a coin's opening, floor and holders from live Fuji reads, shown as tool chips.
+
 Visual: the Snowtrace pages of the factory and the vault, and the tx tables from the README.
 
 ---
@@ -92,7 +95,7 @@ Visual: the Snowtrace pages of the factory and the vault, and the tx tables from
 ## 8. Why Avalanche: what is real, and what is not.
 
 - **Real:** sub-second finality, measured on every trade from broadcast to a final block (by the block's own millisecond timestamp).
-- **Real:** eERC. Ava Labs' EncryptedERC, unchanged and pinned, with an auditor, used for private bags.
+- **Real:** eERC. Ava Labs' EncryptedERC, unchanged and pinned, with an auditor, used for private bags and private creator tips.
 - **Real:** C-Chain contracts, Core wallet first (EIP-6963), a mainnet deploy script with its cost read from mainnet (not deployed).
 - **Probed, not claimed:** ICM. One Teleporter message from Fuji reached Echo through the public relayer, but no ICM/ICTT feature ships.
 
