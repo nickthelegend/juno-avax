@@ -15,3 +15,5 @@ contracts/broadcast/*/31337/
 contracts/broadcast/**/dry-run/
 .seed-secrets.json
 dist-qa/
+contracts/out-eerc/
+contracts/cache-eerc/

@@ -4,12 +4,16 @@
   "type": "module",
   "dependencies": {
     "@juno/sdk": "workspace:*",
+    "snarkjs": "0.7.5",
     "viem": "2.57.13"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "tsx": "^4.20.6",
     "playwright-core": "1.56.1",
+    "tsx": "^4.20.6",
     "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "test:eerc": "tsx eerc/local-e2e.ts"
   }
 }
