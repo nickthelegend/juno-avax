@@ -4,7 +4,9 @@
 
 Launchpads reward whoever gets the first transaction in, and leave holders with no buyer when the hype goes. Juno opens every post with a sealed-bid auction where everyone pays the same price, and keeps AVAX in each post's own vault so any holder can always burn tokens for their share.
 
-Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace).
+And because every post coin is a public ERC-20, holders can **hide their bag**: shield it into an eERC vault (Ava Labs' EncryptedERC), move it privately, and unshield to sell. Whales and copy-trade bots see the vault, not you.
+
+Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace). eERC vault: [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac). Version **v2.0** (see [CHANGELOG.md](CHANGELOG.md)).
 
 ## Try it
 
@@ -15,7 +17,7 @@ pnpm install
 cp web/.env.example web/.env.local          # public factory address only
 pnpm web:export                             # static export in web/dist
 pnpm web:serve                              # http://localhost:5391
-pnpm test                                   # forge (70) + SDK (4) + web (10)
+pnpm test                                   # forge (70) + SDK (13) + web (13) + eERC on Anvil (26 checks)
 ```
 
 1. Open `/social` — the feed reads every post from Fuji, with prices, floors and who bought.
@@ -23,6 +25,7 @@ pnpm test                                   # forge (70) + SDK (4) + web (10)
 3. Tap **Buy** — the sheet quotes from the contract (`quoteBuy`) and shows the fee and what the buy adds to the floor. Nothing is sent until your wallet approves.
 4. **Connect** Core, MetaMask or any EIP-6963 wallet; the app asks it to switch to Fuji (adding the network if needed). Get test AVAX from the [Core faucet](https://core.app/tools/testnet-faucet/?subnet=c&token=c).
 5. **Post** (the + tab): pick art, name it, launch. Then you have one minute to place a sealed bid, one to reveal, and anyone can settle. After each transaction the app shows how long Avalanche took to make it final.
+6. **Hide your bag**: on any coin page tap *Hide your bag* (or open `/vault`). *Public view* shows what anyone can read. *Your bag* asks for one signature (not a transaction), then registers your key with a proof built in the browser, and lets you shield, send privately and unshield. *Auditor* shows transfer amounts only to the auditor's wallet.
 
 ## How a post works
 
@@ -35,15 +38,25 @@ pnpm test                                   # forge (70) + SDK (4) + web (10)
 
 Payouts that can wait are pulled (refunds, creator earnings); sells and redemptions pay last, after all state is written, under a reentrancy guard. Each post keeps a 120-entry fill log (`trades()`) and a `holders()` view, so the app draws charts and holder lists with no indexer and no server.
 
-## What is Avalanche-native here, and what is not
+## Avalanche features
 
-| | Status |
-| --- | --- |
-| **Fast finality, measured** | **Used.** Every transaction sent from the app shows its own time from broadcast to a final block, read from the including block's millisecond timestamp (Fuji headers carry `timestampMilliseconds`), and the time until the public RPC returned the receipt. Avalanche C-Chain blocks are final when accepted, so there is no confirmation count to wait for. The desktop rail and the landing page read Fuji's live block cadence from the headers. Seeded run: see the median under the tables below. |
-| **Fuji C-Chain contracts, Core wallet** | **Used.** Solidity on C-Chain, factory source verified on Snowtrace, EIP-6963 wallet discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain` to Fuji. |
-| **Sealed bids with eERC** | **Not used — commit-reveal instead.** eERC (AvaCloud's encrypted ERC) keeps balances and amounts as ElGamal ciphertexts that only the owner and the auditor can decrypt, with client-side Groth16 proofs. A clearing-price auction has to read every bid to settle it on-chain, which eERC deliberately does not allow without a trusted decryptor. So bids are hidden with commit-reveal and identical escrows, and the reveal step is public. This is stated in the app as well. |
-| **ICM / ICTT** | **Not used.** Juno needs no second chain; bridging test USDC in from another L1 would not have made the product better within the time. |
-| Mainnet, own L1 | Not used. Fuji only, test AVAX only. |
+| | Status | Evidence |
+| --- | --- | --- |
+| **eERC: Hide your bag** | **Used, live on Fuji.** Ava Labs' official [EncryptedERC](https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1) in converter mode, used unchanged and pinned as a submodule, with production verifiers and an auditor. Any post coin can be shielded into one vault, moved privately between holders with transfer proofs, and unshielded to sell or redeem. Proofs are built in the browser. | Vault [`0xb999d23a…`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac) · Registrar [`0x949a55dd…`](https://testnet.snowtrace.io/address/0x949a55ddff2a85ce1a1bad7c760515903dee0c93) · a private transfer, kai → oto, PILE-IN [0xbd167cc5…](https://testnet.snowtrace.io/tx/0xbd167cc59c65aff309d69915f27e4a1f869baca49d0198d6774cf39106db4896) · the web-app run (table below) |
+| **Fast finality, measured** | **Used.** Every transaction sent from the app shows its own time from broadcast to a final block (read from the block's `timestampMilliseconds`) and to a readable receipt. C-Chain blocks are final when accepted, so there is no confirmation count. | Seeded run: median 0.24 s to a final block (below) |
+| **Fuji C-Chain contracts, Core wallet** | **Used.** Solidity on C-Chain, factory source verified on Snowtrace, EIP-6963 discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain`. | Factory [`0xac736951…`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) |
+| **Mainnet readiness** | **Ready, not deployed.** `scripts/mainnet/deploy.ts` runs dry by default: it checks chain 43114 and reads gas and cost from mainnet (about 0.037 AVAX for the factory, 0.104 AVAX with the vault on 12 Nov). A broadcast needs a typed confirmation and Nick's own key. Runbook: [scripts/deploy-mainnet.md](scripts/deploy-mainnet.md). | No mainnet transaction exists |
+| **ICM / ICTT** | **Probed, not shipped.** One Teleporter message from Fuji C-Chain to Echo was delivered by the public relayer ([0xe47dac77…](https://testnet.snowtrace.io/tx/0xe47dac771067e3a763a85e94608f9610029e40db69f926aba38c3240e36a3efc)), so ICTT bridging of graduated coins is feasible. No product feature uses it yet, so it is not claimed. | `deployments/fuji.json` → `icmProbe` |
+| Own L1 | Not used. | — |
+
+### Hide your bag: what is private, and what is not
+
+- **Public:** how many of each coin the vault holds (an ERC-20 balance), who has opened a private bag, and every **shield** and **unshield** amount, because those are ERC-20 transfers.
+- **Private:** each holder's balance inside the vault (an ElGamal ciphertext on BabyJubJub) and the amount of every **private transfer**. The public sees "kai → oto, amount hidden".
+- **The auditor** (a separate account set by the vault owner) can decrypt transfer and withdraw amounts, because every proof has to encrypt the amount to the auditor's key. The auditor cannot move anyone's coins.
+- **Honest limit, from upstream:** a deposit is encrypted with a fixed randomness (a contract has no randomness), so an account that has only ever shielded has a balance anyone could work out from its public deposits. Privacy starts once a bag receives a private transfer or spends one. The app shows that order: shield, then send privately.
+- **Why the opening auction does not use eERC:** a clearing-price auction has to read every bid to settle it on-chain. The opening uses commit-reveal with identical escrows. eERC hides holdings instead.
+- **Keys:** one wallet signature over a fixed message (naming the account and chain 43113) derives the holder's BabyJubJub key on the device. Juno never stores it. RFC 6979 wallets (Core, MetaMask) sign deterministically, so the same wallet always reopens the same bag.
 
 ## Live on Fuji
 
@@ -60,9 +73,118 @@ Payouts that can wait are pulled (refunds, creator earnings); sells and redempti
 | Post `night-swim` (JunoPost + its ERC-20) | [`0x48FCE68864116bA594Ae8C7412759F8BE86E1026`](https://testnet.snowtrace.io/address/0x48FCE68864116bA594Ae8C7412759F8BE86E1026) |
 | Post `sunset-dump` (JunoPost + its ERC-20) | [`0x12D9a65e6ca502e65c847214aFB82b7049E139BF`](https://testnet.snowtrace.io/address/0x12D9a65e6ca502e65c847214aFB82b7049E139BF) |
 | Post `glow-up` (JunoPost + its ERC-20) | [`0x628dD88892F45d416AAdC0185407f726A0929e9b`](https://testnet.snowtrace.io/address/0x628dD88892F45d416AAdC0185407f726A0929e9b) |
-| Post `qa-11120941` (launched from the web app) | [`0x1701D2B17613242E978841349cf316938118010F`](https://testnet.snowtrace.io/address/0x1701D2B17613242E978841349cf316938118010F) |
+| Post `night-market` (JunoPost + its ERC-20) | [`0xF022Ac5a5237229aEbe06911Bf3f30B8258eC002`](https://testnet.snowtrace.io/address/0xF022Ac5a5237229aEbe06911Bf3f30B8258eC002) |
+| Post `first-ollie` (JunoPost + its ERC-20) | [`0x2C515031f820A89A5251eF7bBbE5fe490BDcb9c4`](https://testnet.snowtrace.io/address/0x2C515031f820A89A5251eF7bBbE5fe490BDcb9c4) |
+| Post `coffee-run` (JunoPost + its ERC-20) | [`0x0b0044D6bA59cD998d43C07B0D74ebd7A3D43f63`](https://testnet.snowtrace.io/address/0x0b0044D6bA59cD998d43C07B0D74ebd7A3D43f63) |
+| Post `qa-11120941` (launched from the web app, v1 run) | [`0x1701D2B17613242E978841349cf316938118010F`](https://testnet.snowtrace.io/address/0x1701D2B17613242E978841349cf316938118010F) |
+| Post `qa-11121113` (launched from the web app at 375 px) | [`0x9052d709428F2eCe2216BcAFF56D65b0681D1988`](https://testnet.snowtrace.io/address/0x9052d709428F2eCe2216BcAFF56D65b0681D1988) |
+| Post `qa-11121108` (launched from the web app at 1440 px) | [`0x37f124557feed5f292AB80De1379f133bcdC6B62`](https://testnet.snowtrace.io/address/0x37f124557feed5f292AB80De1379f133bcdC6B62) |
+| eERC vault: EncryptedERC, converter mode ([upstream](https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1)) | [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac) |
+| eERC Registrar | [`0x949a55ddff2a85ce1a1bad7c760515903dee0c93`](https://testnet.snowtrace.io/address/0x949a55ddff2a85ce1a1bad7c760515903dee0c93) |
+| eERC BabyJubJub library | [`0xbac19231588a71ede20f820917593bcf180ab416`](https://testnet.snowtrace.io/address/0xbac19231588a71ede20f820917593bcf180ab416) |
+| eERC registration verifier (production) | [`0xb1a21983062d4d613924c8d0dc21332858c7c94e`](https://testnet.snowtrace.io/address/0xb1a21983062d4d613924c8d0dc21332858c7c94e) |
+| eERC mint verifier (production) | [`0x4a129268ccd6a9c69f3452b39b08e7a76df688ae`](https://testnet.snowtrace.io/address/0x4a129268ccd6a9c69f3452b39b08e7a76df688ae) |
+| eERC withdraw verifier (production) | [`0x567a6c6638d2ad7f80db688900a1d983e2d4b17e`](https://testnet.snowtrace.io/address/0x567a6c6638d2ad7f80db688900a1d983e2d4b17e) |
+| eERC transfer verifier (production) | [`0xc6749bfdf4ad3058ec8e7013e364cad80b366fda`](https://testnet.snowtrace.io/address/0xc6749bfdf4ad3058ec8e7013e364cad80b366fda) |
+| eERC burn verifier (production) | [`0x1ae83ae1fd91c091fc4bbddcfff0f17069937635`](https://testnet.snowtrace.io/address/0x1ae83ae1fd91c091fc4bbddcfff0f17069937635) |
+| eERC auditor (account) | [`0xA98280DF5007bc9E78B1644327702eE9f55B6cb8`](https://testnet.snowtrace.io/address/0xA98280DF5007bc9E78B1644327702eE9f55B6cb8) |
 
-### One full flow from the web app (12/12 succeeded)
+### Hide your bag from the web app at 375 px (4/4 succeeded)
+
+Driven through the web build in headless Chrome by `scripts/qa-vault.ts` with the QA signer (account [`0xB490723D988BD713374D9c6Efd875614B89770fe`](https://testnet.snowtrace.io/address/0xB490723D988BD713374D9c6Efd875614B89770fe)). Every proof was built in the page by snarkjs. Coin [`0x1701D2B17613242E978841349cf316938118010F`](https://testnet.snowtrace.io/address/0x1701D2B17613242E978841349cf316938118010F). The auditor account then opened the auditor view and decrypted the transfer amounts.
+
+| # | Step | Call | Tx | Final block | Receipt |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | shield | `approve` | [0x3e8773ff…](https://testnet.snowtrace.io/tx/0x3e8773ff8784fab79a0d8f1add654d1322f7b16a161dac72c6b56495f1e35843)  | 0.09 s | 1.62 s |
+| 2 | shield | `deposit` | [0x0a31ade5…](https://testnet.snowtrace.io/tx/0x0a31ade5d76673926f2581b86d5e72a38a7d7ceff40adf4cedc2861676943bac)  | 0.18 s | 1.98 s |
+| 3 | send private | `transfer` | [0xb83db8f9…](https://testnet.snowtrace.io/tx/0xb83db8f96e6f29689c40588f3433f2e8d41294c42602fa0808ee7701988a2149)  | 0.84 s | 1.93 s |
+| 4 | unshield | `withdraw` | [0x8058b176…](https://testnet.snowtrace.io/tx/0x8058b1767517ddf64fbbc8a7f9bb06da93cd9b931f4da2c5320f5119b85b25a7)  | 0.20 s | 1.60 s |
+
+### Hide your bag from the web app at 1440 px (5/5 succeeded)
+
+Driven through the web build in headless Chrome by `scripts/qa-vault.ts` with the QA signer (account [`0xB490723D988BD713374D9c6Efd875614B89770fe`](https://testnet.snowtrace.io/address/0xB490723D988BD713374D9c6Efd875614B89770fe)). Every proof was built in the page by snarkjs. Coin [`0x1701D2B17613242E978841349cf316938118010F`](https://testnet.snowtrace.io/address/0x1701D2B17613242E978841349cf316938118010F). The auditor account then opened the auditor view and decrypted the transfer amounts.
+
+| # | Step | Call | Tx | Final block | Receipt |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | register | `register` | [0x519520e9…](https://testnet.snowtrace.io/tx/0x519520e9c911be6afb7d3999b28d6e9bf016ed166155fe4345abd6568ae66796)  | 0.20 s | 1.62 s |
+| 2 | shield | `approve` | [0x7cc84d7f…](https://testnet.snowtrace.io/tx/0x7cc84d7ff5f8010cf8684dd75fa41b501c59172d5d9899ad1a3261e66f31288c)  | 0.80 s | 1.86 s |
+| 3 | shield | `deposit` | [0x279fd13c…](https://testnet.snowtrace.io/tx/0x279fd13ca5f02b6e61b07be9881c5b4bc579ea155c37a5d335972f9c67cb42a2)  | 0.22 s | 1.89 s |
+| 4 | send private | `transfer` | [0x466fb83e…](https://testnet.snowtrace.io/tx/0x466fb83e2438adf8b0dbee3147f8d25a76a5999a8d8fb50a7c646407eb04cc33)  | 0.13 s | 1.61 s |
+| 5 | unshield | `withdraw` | [0x9e2bc866…](https://testnet.snowtrace.io/tx/0x9e2bc86648bb1bc8e897dd4efdba6f9bd7bf83989be63cec429488e536e236e2)  | 0.03 s | 1.61 s |
+
+### Full post flow from the web app at 375 px (12/12 succeeded)
+
+Driven through the web build in headless Chrome by `scripts/qa-flow.ts` with the QA signer (account [`0xB490723D988BD713374D9c6Efd875614B89770fe`](https://testnet.snowtrace.io/address/0xB490723D988BD713374D9c6Efd875614B89770fe)), post `qa-11121113`.
+
+| # | Step | Call | Tx | Final block | Receipt |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | createPost | `createPost` | [0x6455d7c7…](https://testnet.snowtrace.io/tx/0x6455d7c7ad3796b53fc56c5d9b8fc221154d499642edc84b4ccb10762db1e40f)  | 0.14 s | 1.39 s |
+| 2 | commit | `commit` | [0x29aed41d…](https://testnet.snowtrace.io/tx/0x29aed41de8a8b8f3e1fa1d81e81bf288a119ba61b4bbeaed6d7c1694a13544bd)  | 0.18 s | 1.97 s |
+| 3 | reveal | `reveal` | [0xe20ad400…](https://testnet.snowtrace.io/tx/0xe20ad4002dfc76f05e466472f8f8aa514329c0d57346e91e831270631af3fb2f)  | 0.18 s | 1.60 s |
+| 4 | settle | `settle` | [0x43cb619e…](https://testnet.snowtrace.io/tx/0x43cb619ef813487d52b5100a78a67ed4e51a6e9ea0400bcc8afb1e84a49d82ee)  | 0.15 s | 1.63 s |
+| 5 | claimRefund | `claimRefund` | [0x549c165a…](https://testnet.snowtrace.io/tx/0x549c165ab0ab0ddaf6d65d6bfc071cd1f008e47a69470e0bd8ccfe2b7030c45b)  | 0.11 s | 1.71 s |
+| 6 | buy | `buy` | [0x6b357b25…](https://testnet.snowtrace.io/tx/0x6b357b25cb9d90a8684e2c6ee68088e9f34b9a0781466cc514b626080e0783e4)  | 0.10 s | 1.26 s |
+| 7 | sell | `sell` | [0xa0d7349f…](https://testnet.snowtrace.io/tx/0xa0d7349f9645e408c7d0385f0533be683cda8ea32d026271569c6f57bc7bd4c3)  | 0.18 s | 1.61 s |
+| 8 | redeem | `redeem` | [0x3243f039…](https://testnet.snowtrace.io/tx/0x3243f039193991ee37de3a10339042fda99c6542ea955eb4889ddf8eb1fab7e5)  | 0.91 s | 2.32 s |
+| 9 | submitProof | `submitProof` | [0xd32e55ec…](https://testnet.snowtrace.io/tx/0xd32e55eccb586c9873aeaa15f11ab5954425e7d1b015d2921b6c93fb167d24c6)  | 0.48 s | 1.85 s |
+| 10 | vote | `vote` | [0x8f267b31…](https://testnet.snowtrace.io/tx/0x8f267b31e842f30a20d3a7309e2e025ca8684dce61f9a83dd7dd3eb4afc801ba)  | 0.23 s | 1.36 s |
+| 11 | finalizeDare | `finalizeDare` | [0x601496cd…](https://testnet.snowtrace.io/tx/0x601496cdd246e36fcde7569acba4c28d1247649d8dc5a80c97e48de5beeb730a)  | 0.16 s | 1.60 s |
+| 12 | withdrawEarnings | `withdrawEarnings` | [0x0c01ba00…](https://testnet.snowtrace.io/tx/0x0c01ba00d91166be341720b557beb632a2435fbc38b272dd7713d7b5e9395d27)  | 0.39 s | 1.85 s |
+
+### Full post flow from the web app at 1440 px (12/12 succeeded)
+
+Driven through the web build in headless Chrome by `scripts/qa-flow.ts` with the QA signer (account [`0xB490723D988BD713374D9c6Efd875614B89770fe`](https://testnet.snowtrace.io/address/0xB490723D988BD713374D9c6Efd875614B89770fe)), post `qa-11121108`.
+
+| # | Step | Call | Tx | Final block | Receipt |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | createPost | `createPost` | [0xc8bb6eca…](https://testnet.snowtrace.io/tx/0xc8bb6ecabc6645c1eb51f6c0f25ea563dc72f21a076eabb6b36b38402bd3de93)  | — | 1.41 s |
+| 2 | commit | `commit` | [0xaec18301…](https://testnet.snowtrace.io/tx/0xaec183017105ec5693df661623d5fc23685ca08671e1b16ea1d98e3f73f63d07)  | 0.04 s | 1.67 s |
+| 3 | reveal | `reveal` | [0x1d63beaa…](https://testnet.snowtrace.io/tx/0x1d63beaa3fcf7df9dc4ff6baf0c3f11ace940bbbdb658298090c7f2a81ebc748)  | 0.39 s | 1.83 s |
+| 4 | settle | `settle` | [0xf5381445…](https://testnet.snowtrace.io/tx/0xf5381445799390da11047357f64bf5c513d063adbd88dfb4ce624f8984cffe68)  | 0.74 s | 2.20 s |
+| 5 | claimRefund | `claimRefund` | [0x75adda89…](https://testnet.snowtrace.io/tx/0x75adda89f0efa9bdbd0b20310f807ba1472fa40c34d34c602174e9c6d55b92d2)  | 0.19 s | 1.70 s |
+| 6 | buy | `buy` | [0x8ce0e651…](https://testnet.snowtrace.io/tx/0x8ce0e651f13c0145abb6db0bb460415f426ea8549963ce108e9b239bc62fbaf3)  | 0.28 s | 1.63 s |
+| 7 | sell | `sell` | [0x9e7293e9…](https://testnet.snowtrace.io/tx/0x9e7293e95e01f13d3583fc310202359c98e62ec91618f0a667d182a63943dfd5)  | 0.15 s | 1.86 s |
+| 8 | redeem | `redeem` | [0xddcdc50f…](https://testnet.snowtrace.io/tx/0xddcdc50ff3327b49b27eb7713151dbb2e2a1cf8c51f90d9f720763a3feed2d99)  | 0.27 s | 2.09 s |
+| 9 | submitProof | `submitProof` | [0x9a86c6e0…](https://testnet.snowtrace.io/tx/0x9a86c6e03cc7d37f68ef10bbd5696c9fff4dcd2427ae49c02838832688ba1d46)  | 0.68 s | 2.23 s |
+| 10 | vote | `vote` | [0x52ea30a4…](https://testnet.snowtrace.io/tx/0x52ea30a48a4215ac11d49e856333d5b100d6c492a12e281db61d8f8c2ba467f9)  | 0.20 s | 1.63 s |
+| 11 | finalizeDare | `finalizeDare` | [0xe654ea7a…](https://testnet.snowtrace.io/tx/0xe654ea7a3ca79147fee97d32252ce1d3298a4d73e4304ba505354e851904517f)  | 0.49 s | 1.86 s |
+| 12 | withdrawEarnings | `withdrawEarnings` | [0x68ad3589…](https://testnet.snowtrace.io/tx/0x68ad3589970bbd61911913ccfe71b8a1399b65f3c6bc975784be1704dc8f6681)  | 0.70 s | 2.08 s |
+
+### eERC vault on Fuji (27 transactions, 0 failed)
+
+Deployed and seeded by `scripts/eerc/fuji.ts` with proofs from snarkjs and the production zkeys.
+
+| # | Step | From | Tx | Gas |
+| ---: | --- | --- | --- | ---: |
+| 1 | deploy RegistrationVerifier | deployer | [0xf2715dec…](https://testnet.snowtrace.io/tx/0xf2715deca40ff6af49e6e703344ca7e2eed7e2469e2089754a25aa9d97fb4c74) | 425,936 |
+| 2 | deploy MintVerifier | deployer | [0x1ba36989…](https://testnet.snowtrace.io/tx/0x1ba369897f59dc110bbd457f1ac4c41edda48de9ceea056c23a5c9b40b3f213e) | 813,961 |
+| 3 | deploy WithdrawVerifier | deployer | [0xc0fde28c…](https://testnet.snowtrace.io/tx/0xc0fde28c515d15c2ca10c2ef6c39ef0c0fe110b0f29438c980ffd29c1d20f30a) | 649,853 |
+| 4 | deploy TransferVerifier | deployer | [0xc38b612b…](https://testnet.snowtrace.io/tx/0xc38b612bdf021ab98cab939089b3fe54744523248c774c0d67c5b70ef8e30fba) | 978,066 |
+| 5 | deploy BurnVerifier | deployer | [0xcc8f6bd1…](https://testnet.snowtrace.io/tx/0xcc8f6bd1004088ac9e4be9a167de414000d41863fe70e4560b1e108acd734468) | 711,621 |
+| 6 | deploy BabyJubJub | deployer | [0xfcf4340d…](https://testnet.snowtrace.io/tx/0xfcf4340db346fb303b9965289eb053fc90680678860cc3402e598685591709a8) | 435,950 |
+| 7 | deploy Registrar | deployer | [0x1deab41e…](https://testnet.snowtrace.io/tx/0x1deab41e6c5e8500366dc1a86791b2a7371abb3c33a7e765aa3740f5d706d416) | 454,935 |
+| 8 | deploy EncryptedERC | deployer | [0x5e2467c8…](https://testnet.snowtrace.io/tx/0x5e2467c82e8dcb70e2bc4416f62b7a4a10f6cab363777fb6ca15ede4a6c8a894) | 4,393,214 |
+| 9 | auditor registers | auditor | [0xd9b8a6a6…](https://testnet.snowtrace.io/tx/0xd9b8a6a6bda078b6fe09c8df2bc16eb2678d37907ca7b78132d7e2e49a875e9d) | 319,554 |
+| 10 | owner sets auditor | deployer | [0xca0326dc…](https://testnet.snowtrace.io/tx/0xca0326dc628e859e5c6f4c0ba859777787c583c61b4435b93a733eb469ef7537) | 103,905 |
+| 11 | mira registers | mira | [0xe5094035…](https://testnet.snowtrace.io/tx/0xe50940355d4249a296556379ba0c3051128a0ad8e75175d9f68d7ef3aa3b9a5c) | 319,542 |
+| 12 | kai registers | kai | [0x7575a9e3…](https://testnet.snowtrace.io/tx/0x7575a9e3aec3995d81fc7a25853722b380cca79657a538920faefb7089ddb841) | 319,542 |
+| 13 | oto registers | oto | [0x144d6268…](https://testnet.snowtrace.io/tx/0x144d62683fad9778805f5c6a89b4d370ca9a604d3d792c9462f6810189223de5) | 319,542 |
+| 14 | kai shields 600 PILE-IN approve | kai | [0x75e24096…](https://testnet.snowtrace.io/tx/0x75e240964dd93e96109589a664fcf5aa45b9d1e28a678370c021e241809dbdc0) | 45,936 |
+| 15 | kai shields 600 PILE-IN | kai | [0xa38cda41…](https://testnet.snowtrace.io/tx/0xa38cda41582c70846a8c1d443d0eb80811de6508f228793da39cef7fbff46e76) | 653,549 |
+| 16 | kai sends PILE-IN to oto privately | kai | [0xbd167cc5…](https://testnet.snowtrace.io/tx/0xbd167cc59c65aff309d69915f27e4a1f869baca49d0198d6774cf39106db4896) | 1,124,165 |
+| 17 | oto unshields 50 PILE-IN | oto | [0x1b3c1d08…](https://testnet.snowtrace.io/tx/0x1b3c1d08018ea946b4a4203c1fb082df4ba7db6bf25f96dcbff9a248644bbe9e) | 774,576 |
+| 18 | oto redeems 10 unshielded PILE-IN | oto | [0x8da09217…](https://testnet.snowtrace.io/tx/0x8da09217371ef10e90b597e8e6259f784a540d4fcfb41c00085659389961f02f) | 112,242 |
+| 19 | oto shields 60 SPROUT approve | oto | [0x2220253b…](https://testnet.snowtrace.io/tx/0x2220253bf981e306ce43b086130e7519a61b2f2ddf39a14795f92ae648907e0b) | 45,924 |
+| 20 | oto shields 60 SPROUT | oto | [0x33aa4c86…](https://testnet.snowtrace.io/tx/0x33aa4c860bace8339c5c43b0acf7b4c214650fa9941acf98810743e200a930ab) | 617,805 |
+| 21 | oto sends SPROUT to mira privately | oto | [0x3a8bcba9…](https://testnet.snowtrace.io/tx/0x3a8bcba9443fab695be9dc737eb353b4801f6a9aaa9ed69927c268e13875418d) | 1,124,189 |
+| 22 | mira unshields 10 SPROUT | mira | [0x84885bf7…](https://testnet.snowtrace.io/tx/0x84885bf785d5da8077d4890e7614e4b56b2940697e0578194c82c486c699212d) | 760,745 |
+| 23 | mira sells 5 unshielded SPROUT | mira | [0x730fc8ee…](https://testnet.snowtrace.io/tx/0x730fc8ee44794003fe48a77153565ea9a12a6b5653d9bb67ad8e7b1a71534e09) | 136,080 |
+| 24 | mira shields 30 BALLOONS approve | mira | [0x6ea3a2fc…](https://testnet.snowtrace.io/tx/0x6ea3a2fc0ed8bee765d4485c8b4f24e169ddcc94fd4b066b7502da15933be090) | 45,924 |
+| 25 | mira shields 30 BALLOONS | mira | [0x152721db…](https://testnet.snowtrace.io/tx/0x152721dba1256719b26b94305ed8e19a63980cbe6ef314198e888b99d70d7b1f) | 613,162 |
+| 26 | oto shields 40 GLOW-UP approve | oto | [0x68ff19b1…](https://testnet.snowtrace.io/tx/0x68ff19b1c7b8ec08973ec31bde383537188794194919cb1daab923c498e45537) | 45,924 |
+| 27 | oto shields 40 GLOW-UP | oto | [0x5781d168…](https://testnet.snowtrace.io/tx/0x5781d168d2a98ca6d78c56efc80a91d2cf905539a992ac29572b0b8868eae90c) | 608,843 |
+
+### v1.0 run: one full flow from the web app (12/12 succeeded)
 
 Driven through the web build in headless Chrome by `scripts/qa-flow.ts` with the QA signer (account [`0xB490723D988BD713374D9c6Efd875614B89770fe`](https://testnet.snowtrace.io/address/0xB490723D988BD713374D9c6Efd875614B89770fe)), post `qa-11120941`.
 
@@ -83,9 +205,9 @@ Driven through the web build in headless Chrome by `scripts/qa-flow.ts` with the
 
 An earlier QA run (post [`0x93Fe6327e9e05594c15EBEC1716d4619433D4CD9`](https://testnet.snowtrace.io/address/0x93Fe6327e9e05594c15EBEC1716d4619433D4CD9)) stopped after its sealed bid because a test-harness locator matched two elements; that post was closed by script: settle bid never revealed [0x2fdbdacc…](https://testnet.snowtrace.io/tx/0x2fdbdacc11091906b3d8c6259a75f2b12b112761ed530f579c504282f8ffb9ff), refund minus 1pct [0x1a3d2682…](https://testnet.snowtrace.io/tx/0x1a3d26826945d4e80263c15010896b77b56fce8ffa94e7979fa0783f16259728), finalize no holders bond returns [0xcf3079a5…](https://testnet.snowtrace.io/tx/0xcf3079a509e93352176383378d25285c775986aa2701554f7568556450ed6470), creator withdraws bond and penalty [0xe155c874…](https://testnet.snowtrace.io/tx/0xe155c87402451ecab68d7c427ac4360708a18385cf67f048c40111aa6fda07a6).
 
-### Seeded on Fuji (75 transactions, 0 failed)
+### Seeded on Fuji (104 transactions, 0 failed)
 
-Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts`; every call made by `scripts/fuji/seed.ts`.
+Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts`; every call made by `scripts/fuji/seed.ts`, `seed-more.ts` and `seed-v2.ts`.
 
 | # | Step | From | Tx | Final block | Receipt |
 | ---: | --- | --- | --- | ---: | ---: |
@@ -164,8 +286,37 @@ Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts
 | 73 | glow-up refund kai | kai | [0x9d405227…](https://testnet.snowtrace.io/tx/0x9d4052276c4268592116a36066a9dc80b4ba2b3bd63c1f1f8832bce865980cd6) | 0.15 s | 1.62 s |
 | 74 | glow up buy 25 | oto | [0xf498678e…](https://testnet.snowtrace.io/tx/0xf498678e89a3a4ab96f51166350448bc24eb97d3d81d8cb82c51cfae97bc96d8) | 0.20 s | 1.85 s |
 | 75 | glow up sell 5 | oto | [0x66f42f2c…](https://testnet.snowtrace.io/tx/0x66f42f2c4a2fe711371a8972749f0c0dfb1b7b1c424e2c995c16162a099536c4) | 0.13 s | 1.61 s |
+| 76 | create post night-market | kai | [0x617f0995…](https://testnet.snowtrace.io/tx/0x617f09950994f9c8c42873d68bbea267f5c8b852d07ffaf577ade5947a2e1214) | 0.77 s | 2.32 s |
+| 77 | create post first-ollie | oto | [0x91d2cb6d…](https://testnet.snowtrace.io/tx/0x91d2cb6d8e7509a1aa7bf3b75e1bd98ea26ddbce8175591881fc2e83625ce562) | 0.08 s | 1.36 s |
+| 78 | create post coffee-run | mira | [0x17707649…](https://testnet.snowtrace.io/tx/0x17707649594007ae14e49e911935386ec9b59d4bff2fe199c6e83b02d5e0d95d) | 0.36 s | 1.63 s |
+| 79 | night-market sealed bid oto | oto | [0x6c1a7654…](https://testnet.snowtrace.io/tx/0x6c1a7654d34b1eb0e94688847e20fae295c4fe51a20b8cc99fee6d4fa45327be) | 0.35 s | 1.68 s |
+| 80 | night-market sealed bid mira | mira | [0xff7ef799…](https://testnet.snowtrace.io/tx/0xff7ef7996393f88c78834b8b070bf8edaac477cd1f9755f229612c85093629bd) | 0.32 s | 1.88 s |
+| 81 | first-ollie sealed bid kai | kai | [0x4ded3c09…](https://testnet.snowtrace.io/tx/0x4ded3c09595a3b8a9db05cf9cd3bbfaafe8b039b0db94eb5baee1012a44c946b) | 0.09 s | 1.36 s |
+| 82 | first-ollie sealed bid mira | mira | [0xf2f2f5c4…](https://testnet.snowtrace.io/tx/0xf2f2f5c492c6791f7bce3a43665487c33b210505644591a084064780921c45d7) | 0.58 s | 2.09 s |
+| 83 | coffee-run sealed bid kai | kai | [0x010daa96…](https://testnet.snowtrace.io/tx/0x010daa96fdbb9029670f197f4459e4cf33615483765eddbce82e510c6b8cba78) | 0.15 s | 1.61 s |
+| 84 | night-market reveal oto | oto | [0x42eb1f5d…](https://testnet.snowtrace.io/tx/0x42eb1f5de52d88c8f1b92507b5d5ae1e9386ac73b44da9b0c028beb503b9c1c5) | 0.57 s | 2.09 s |
+| 85 | night-market reveal mira | mira | [0xcc5ead8a…](https://testnet.snowtrace.io/tx/0xcc5ead8a11cf685c41b8427c715eb550860640364903d2e84bc1253c45aa3a41) | 0.14 s | 1.62 s |
+| 86 | first-ollie reveal kai | kai | [0x0ce0fcfa…](https://testnet.snowtrace.io/tx/0x0ce0fcfa4e197866c72d6495795f565d0c1fc6046855396d3ce96d600fcbf1e5) | 1.08 s | 2.33 s |
+| 87 | first-ollie reveal mira | mira | [0x145d0ce9…](https://testnet.snowtrace.io/tx/0x145d0ce9950a0046ae3651d31b555b8549005c49815726b5045b71da31758bc0) | — | 1.61 s |
+| 88 | coffee-run reveal kai | kai | [0x7b9921f1…](https://testnet.snowtrace.io/tx/0x7b9921f1c6d99b934187e1d0390d79d060220d85f82a2e8d81ab43320dc5522f) | 0.19 s | 1.61 s |
+| 89 | night-market settle | kai | [0xaa327be7…](https://testnet.snowtrace.io/tx/0xaa327be7718ab3898f973e9f420d2ba0a89af8c6c046a656f10de1ba7dead6d5) | 0.86 s | 2.10 s |
+| 90 | night-market refund oto | oto | [0x11b6a8cf…](https://testnet.snowtrace.io/tx/0x11b6a8cfa2ca6e477314a74c0d082a46bbbef817ad17c86ba35528c65166f482) | 0.41 s | 1.86 s |
+| 91 | night-market refund mira | mira | [0xd6e59406…](https://testnet.snowtrace.io/tx/0xd6e594068043005b83d2196fd71ecb2c212b5c4aafe010aca320b4aba58ec206) | 0.20 s | 1.62 s |
+| 92 | night market buy 15 | mira | [0x28ff5cbf…](https://testnet.snowtrace.io/tx/0x28ff5cbfa8fcacdec0e58d0e6c1a6ef5a0ff6283e267072425109d6027cf827e) | 0.95 s | 2.12 s |
+| 93 | night market buy 30 | oto | [0xa81e883c…](https://testnet.snowtrace.io/tx/0xa81e883c91f361655ef50f531e1abcfda79616771366ea1a723cb111e0a99cff) | 0.71 s | 2.10 s |
+| 94 | night market sell 4 | mira | [0x4089ecf0…](https://testnet.snowtrace.io/tx/0x4089ecf029e4efe2d82e59f1cf8a46e3a3f8490fa390eafeed6fc64de80048a4) | 0.77 s | 2.10 s |
+| 95 | first-ollie settle | oto | [0x7a26c340…](https://testnet.snowtrace.io/tx/0x7a26c340732c7631d211f2ab55fd147cf93514ca89f24d86c628e46264aaf38d) | 0.04 s | 1.37 s |
+| 96 | first-ollie refund kai | kai | [0x2ce6af1b…](https://testnet.snowtrace.io/tx/0x2ce6af1b67b5522d66c72d7dbf04ea5fdf85b8be081a51df1a5d842529252854) | 0.30 s | 1.84 s |
+| 97 | first-ollie refund mira | mira | [0xd594634f…](https://testnet.snowtrace.io/tx/0xd594634f2219d7f1b9bb44833e582fa3c1eadff565f5496fae494fd379ab8530) | 0.31 s | 1.62 s |
+| 98 | first ollie buy 40 | kai | [0x9f4417c3…](https://testnet.snowtrace.io/tx/0x9f4417c3b7ee3603f7965d01b0de9f2c1d300014f1fc8e9fb1f3f36fd3e4417f) | 0.28 s | 1.62 s |
+| 99 | first ollie buy 10 | mira | [0x42d319e3…](https://testnet.snowtrace.io/tx/0x42d319e39d2eef964e1d85878e330713c0342f75c38dbfaec18370ca9c958b2e) | 0.14 s | 1.62 s |
+| 100 | coffee-run settle | mira | [0xdcfd6559…](https://testnet.snowtrace.io/tx/0xdcfd6559dc6c8eb2008b453c4b4bdd70bba78e3409b81d9ef32fa1cfdf2d2b4e) | 0.18 s | 1.61 s |
+| 101 | coffee-run refund kai | kai | [0x2eb2882f…](https://testnet.snowtrace.io/tx/0x2eb2882fa904e7edfeaad8a6fbd0735973c269284106cfca7827422a4cf2cc56) | 0.15 s | 1.61 s |
+| 102 | coffee run buy 22 | oto | [0x6ad554f9…](https://testnet.snowtrace.io/tx/0x6ad554f9939dff0f4b29d82435102ff2081c382fad40f56b8bc7d6b5a23c5391) | 0.23 s | 1.61 s |
+| 103 | coffee run buy 8 | kai | [0x0601b068…](https://testnet.snowtrace.io/tx/0x0601b0689768d8919086123ccb74c3936570f3789dc81867d80c4dd79dea0fd4) | 0.99 s | 2.34 s |
+| 104 | coffee run redeem 5 | kai | [0xb9eb2579…](https://testnet.snowtrace.io/tx/0xb9eb2579940186736965d575d1eba10d45643f972e13964af16cf766252bc2a6) | 0.15 s | 1.38 s |
 
-Across the 75 seeded transactions: median **0.24 s** from broadcast to a final block (p90 0.73 s, over the 72 where this machine's clock was not ahead of the block's), and 1.84 s until the public RPC returned the receipt (p90 2.10 s). "Final block" is the including block's `timestampMilliseconds` minus this machine's clock at broadcast.
+Across the 104 seeded transactions: median **0.25 s** from broadcast to a final block (p90 0.77 s, over the 100 where this machine's clock was not ahead of the block's), and 1.84 s until the public RPC returned the receipt (p90 2.11 s). "Final block" is the including block's `timestampMilliseconds` minus this machine's clock at broadcast.
 
 ### Superseded: v1
 
@@ -182,18 +333,21 @@ The Juno Expo Router app, exported as a static web build (`expo export --platfor
 - **Reads:** `web/lib/api.ts` reads the factory's `posts()`, then each post's `market()`, `trades()` and `holders()` through `@juno/sdk` (viem, JSON-RPC batched, two public Fuji RPCs with fallback). Buy quotes come from the contract's `quoteBuy`; sell and redemption quotes from the SDK's mirror of the contract maths.
 - **Writes:** `web/lib/wallet.tsx` encodes each call, **simulates it against Fuji with `eth_call` first** (so a refusal shows the contract's reason, mapped to plain words, before the wallet opens), sends it through the person's wallet, and follows it to a receipt, timing it (`lib/tx-status.ts`, `lib/finality.ts`).
 - **Screens:** feed (bump order: live auctions first, then latest trade), reels, coin page (chart, auction card with countdown and phase track, floor, graduation, dare card with proof/vote/finalize, activity, holders, details), trade sheet (buy / sell / redeem with a numpad and live quote), launch flow, profile with positions and P&L from the fill logs, trader pages and a leaderboard.
+- **Private bags:** `web/lib/vault.ts` reads the vault (token list, the vault's ERC-20 balance per coin, Register/Deposit/Withdraw/PrivateTransfer logs in 49,000-block windows, each bag's ciphertext). `web/lib/prover.web.ts` loads the snarkjs browser build and the circuits from `/eerc/`, which `scripts/copy-eerc-assets.mjs` copies from the pinned submodule at export time with a SHA256SUMS file.
 - **Missing values** show "Setup required: NAME". Empty, loading and error states are drawn, nothing is mocked; likes and follows have no contract and are kept on the device only.
-- **QA signer:** a web build made with `EXPO_PUBLIC_QA_SIGNER=1` (`dist-qa/`, never deployed) swaps the browser wallet for a signer that only runs on a local port, only signs Juno calls on Fuji, and stops at 0.015 test AVAX. A production build refuses to import it (`metro.config.js`).
+- **QA signer:** a web build made with `EXPO_PUBLIC_QA_SIGNER=1` (`dist-qa/`, never deployed) swaps the browser wallet for a signer that only runs on a local port, only signs Juno calls on Fuji (plus the eERC key message for its own account and the four vault calls), and stops at 0.015 test AVAX. A production build refuses to import it (`metro.config.js`).
 
 ## Repository
 
 ```
 contracts/   Foundry: JunoFactory, JunoPost, CurveMath + 70 tests (auction, curve, dare, factory, attacks, invariant)
-sdk/         @juno/sdk: viem reads, ABIs, the contract maths in TypeScript
+             lib/EncryptedERC: Ava Labs' eERC, pinned submodule (Ecosystem License), built by FOUNDRY_PROFILE=eerc
+sdk/         @juno/sdk: viem reads, ABIs, the contract maths in TypeScript; @juno/sdk/eerc: eERC client crypto
 web/         the Juno app (Expo Router, static web export)
-scripts/     Fuji keys, funding, deploy, seeding, the web QA flow, evidence tables
+scripts/     Fuji keys, funding, deploy, seeding, the web QA flows, evidence tables
+             eerc/ (vault deploy, Anvil end-to-end), mainnet/ (guarded deploy), icm/ (relayer probe)
 deployments/ fuji.json: addresses and every recorded transaction
-docs/        SLIDES.md
+docs/        SLIDES.md, WIN-GAP.md
 ```
 
 Tests and how to run them: [TESTING.md](TESTING.md). Submission fields: [SUBMISSION.md](SUBMISSION.md).
@@ -217,11 +371,13 @@ The app in `web/` was imported unchanged from `juno-near/packages/app` in commit
 
 **Built for this Speedrun (Nov 12, 2026, from commit `9ba6f0e`):** the Solidity contracts and their 70 tests (a new implementation of the mechanics for the EVM, with changes: bids bound to post/chain/bidder, curve buys never below the auction's clearing price, graduation into the floor, failed dare bonds into the floor, dust sweep, a solvency invariant), the viem SDK, the Fuji deployment and 50 seeded transactions, the move of the app from NEAR to EVM (reads, wallet, simulation, QA signer), measured finality in the UI, web controls for refunds and the dare (proof, vote, finalize), the live block-cadence readout, and the web QA flow. To see only this work: `git diff 29c2ade..HEAD`.
 
+**v2.0 (same day, from tag `v1.0`):** the eERC vault (Hide your bag) with its SDK, Anvil test, Fuji deployment, web screen and browser proving; the mainnet deploy script and runbook; the ICM probe; QA runs at 1440 and 375; three more seeded posts; the JSON-RPC batch fix. `git log v1.0..HEAD`.
+
 ## Hackathon disclosures
 
 Built for **Build Anything on Avalanche** (Team1 India Speedrun, Nov 2026).
 
-AI tools: built with AI coding agents (Claude Code) under human direction; the 3D art kit was generated earlier with ChatGPT images. All code reviewed and tested; see TESTING.md.
+AI tools: built with AI coding agents (Claude Code) under human direction. The eERC contracts and circuits are Ava Labs' own, used unchanged; the 3D art kit was generated earlier with ChatGPT images. All code reviewed and tested; see TESTING.md.
 
 ## License
 

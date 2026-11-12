@@ -9,7 +9,7 @@ All notable changes to Juno on Avalanche. Versions are local git tags. Nothing i
   - `contracts/lib/EncryptedERC`: the upstream repo as a pinned submodule, built with its own Foundry profile. Upstream code is unchanged.
   - `sdk/src/eerc.ts`: wallet-signature keys, BabyJubJub ElGamal, Poseidon PCTs, balance decryption checked against the on-chain ciphertext, proof inputs and the auditor's view.
   - `scripts/eerc/local-e2e.ts`: 26 checks on Anvil with real proofs and the production verifiers, including replayed, tampered, wrong-sender and wrong-chain proofs.
-  - `scripts/eerc/fuji.ts`: vault deployment and 30 seeded transactions (registrations, shields, two private transfers, unshields, a sell and a redeem).
+  - `scripts/eerc/fuji.ts`: vault deployment plus 27 transactions (registrations, shields, two private transfers, unshields, a sell and a redeem).
   - `web/app/vault.tsx`, a "Hide your bag" row on every coin page, and the vault named in holder lists.
   - `scripts/qa-vault.ts`: register, approve, shield, private send and unshield, driven through the web app with the QA signer, followed by the auditor view.
 - **Mainnet readiness.** `scripts/mainnet/deploy.ts` (a dry run by default, guarded broadcast) and `scripts/deploy-mainnet.md`, with gas and cost read from mainnet. Nothing has been deployed to mainnet.

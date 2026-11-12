@@ -1,6 +1,6 @@
 # Testing
 
-Recorded on 12 November 2026. Every number below came from running the command next to it.
+Recorded on 12 November 2026 (v2.0). Every number below came from running the command next to it.
 
 | Suite | Command | Result |
 | --- | --- | --- |
@@ -45,14 +45,45 @@ Golden curve values identical to the Solidity test; buy/sell/redeem quotes inclu
 
 Position accounting from fill logs (realised/unrealised P&L), the price window, and the QA signer policy: only the public Fuji RPCs, only Juno calls on the factory and its posts (a `transfer` is refused), and the 0.015 AVAX budget; for the vault, only `register`/`deposit`/`transfer`/`withdraw` with no value, approvals only to the vault, and only the eERC key message for its own account on Fuji.
 
+## Flow QA (v2.0, 12 Nov 2026, live Fuji, production and QA-signer web builds)
+
+Every row ran end to end on Avalanche Fuji through the web app in headless Chrome, at both widths. "Tx" rows are signed by the QA signer (`dist-qa`, a local-only build) and confirmed on chain. Hashes are in `deployments/fuji.json` → `qaRuns` and `qaVaultRuns` and in the README tables. Screenshot paths are relative to `/Volumes/Extreme SSD/Projects/grokbot/`.
+
+| Flow | Steps checked | 1440 | 375 | Screenshots |
+| --- | --- | --- | --- | --- |
+| Landing | one line ("Every post is a coin."), one action (Open Juno), live post count | pass | pass | `orchestration/shots/avax-juno/v2/landing-*.png` |
+| Feed | reads every post from Fuji, prices, floors, "Bought by" | pass | pass | `orchestration/shots/avax-juno/v2/feed-*.png` |
+| Trade, reels, profile (signed out), trader page | render live data or a designed empty state | pass | pass | `orchestration/shots/avax-juno/v2/trade-*`, `reels-*`, `profile-*`, `trader-*` |
+| Wallet connect | sign-in sheet → QA signer connected → account used by the next send | pass (tx) | pass (tx) | `orchestration/shots/avax-juno/v2/flow-*/00-connect-sheet-*.png` |
+| Post (launch a dare post) | form → `createPost` with a 0.002 AVAX bond → coin page | pass (tx) | pass (tx) | `orchestration/shots/avax-juno/v2/flow-*/00-launch-form-*.png`, `01-auction-open-*` |
+| Auction | sealed bid → reveal → settle → claim refund | pass (4 tx) | pass (4 tx) | `orchestration/shots/avax-juno/v2/flow-*/02-bid-placed-*` … `04-settled-*` |
+| Buy / sell | quote from the contract → buy 5 → sell 2 | pass (2 tx) | pass (2 tx) | `orchestration/shots/avax-juno/v2/flow-*/05-buy-quote-*` … `07-sell-done-*` |
+| Redeem against the floor | redeem 1 | pass (tx) | pass (tx) | `orchestration/shots/avax-juno/v2/flow-*/08-redeem-done-*` |
+| Dare | post proof → vote yes → finalize (after the 5-minute window) → claim the bond | pass (4 tx) | pass (4 tx) | `orchestration/shots/avax-juno/v2/flow-*/10-voted-*`, `11-dare-final-*`, `12-claimed-*` |
+| Hide your bag: open | coin page "Hide your bag" → vault with the coin picked → connect → one signature (no tx) | pass | pass | `orchestration/shots/avax-juno/v2/flow-vault-*/01-coin-hide-your-bag-*`, `02-open-bag-*` |
+| Hide your bag: register | registration proof built in the page → `register` | pass (tx) | already registered | `orchestration/shots/avax-juno/v2/flow-vault-1440/03-create-bag-1440.png` |
+| Hide your bag: shield | `approve` (to the vault only) → `deposit` → decrypted balance | pass (2 tx) | pass (2 tx) | `orchestration/shots/avax-juno/v2/flow-vault-*/*shield-done*` |
+| Hide your bag: send privately | transfer proof in the page → `transfer` to mira, amount hidden publicly | pass (tx) | pass (tx) | `orchestration/shots/avax-juno/v2/flow-vault-*/*send_private-done*` |
+| Hide your bag: unshield | withdraw proof in the page → `withdraw` → coins public again | pass (tx) | pass (tx) | `orchestration/shots/avax-juno/v2/flow-vault-*/*unshield-done*` |
+| Vault public view | per-coin share hidden, ciphertext fingerprints, moves with transfer amounts hidden | pass | pass | `orchestration/shots/avax-juno/v2/vault-public-*`, `flow-vault-*/*public-view*` |
+| Vault auditor view | non-auditor: sealed; auditor wallet: one signature → transfer amounts decrypted | pass | pass | `orchestration/shots/avax-juno/v2/vault-auditor-*`, `flow-vault-*/*auditor-open*` |
+| Error and empty states | unknown coin ("No such coin"), unknown route, vault signed out ("Connect to open your bag") | pass | pass | `orchestration/shots/avax-juno/v2/coin-not-found-*`, `not-found-*`, `vault-yours-signed-out-*` |
+| Hosted build | `pnpm web:export` → `web/dist` (37 MB with `/eerc/` circuits, `vercel.json` SPA fallback); route shots above were taken from this build served statically | builds | builds | not deployed (per brief) |
+
+Totals: the full post flow passed 12/12 transactions at 1440 and 12/12 at 375. Hide your bag passed 5/5 at 1440 and 4/4 at 375. Route screenshots passed 34/34 (17 routes × 2 widths) with no console errors and no horizontal overflow.
+
+**Bug found and fixed during this QA:** at both widths, the browser logged HTTP 500s from `api.avax-test.network`. The cause was viem batching about 75 `eth_call`s into one JSON-RPC request, which the public endpoint rejects above roughly 64 calls (measured: 40 → 200, 80 → 500). The app recovered through the publicnode fallback, but the errors were real. Fixed by capping batches at 32 (`sdk/src/index.ts`). After the fix, the route shots show no console errors.
+
 ## Live runs on Fuji
 
-- **Seeding (v2).** Three generated test accounts (mira, kai, oto), funded with test AVAX from an existing Fuji key (0.179 AVAX drawn in total across v1 and v2). Seven posts: SPROUT (two bids, refunds, buys, a sell), PILE-IN (sold out and graduated in one 800-token buy, then a floor redemption), ROOFTOP (a dare: bids, proof, two yes votes, finalized as accepted, bond withdrawn), BALLOONS (one bid never revealed, refunded minus 1%), NIGHT-SWIM (a dare with no proof: finalized as failed, the bond went into the floor, then a holder redeemed against it), SUNSET-DUMP and GLOW-UP (two more plain posts with bids, refunds, buys and a sell, added so the feed does not open on QA posts). Salts are written to the gitignored `.seed-secrets.json` before any bid.
+- **Seeding (v2).** Three generated test accounts (mira, kai, oto), funded with test AVAX from an existing Fuji key (0.179 AVAX drawn in total across v1 and v2). Seven posts: SPROUT (two bids, refunds, buys, a sell), PILE-IN (sold out and graduated in one 800-token buy, then a floor redemption), ROOFTOP (a dare: bids, proof, two yes votes, finalized as accepted, bond withdrawn), BALLOONS (one bid never revealed, refunded minus 1%), NIGHT-SWIM (a dare with no proof: finalized as failed, the bond went into the floor, then a holder redeemed against it), SUNSET-DUMP and GLOW-UP (two more plain posts with bids, refunds, buys and a sell, added so the feed does not open on QA posts), and in v2 NIGHT-MARKET, FIRST-OLLIE (a live dare) and COFFEE-RUN (auctions, buys, a sell and a redeem; `scripts/fuji/seed-v2.ts`). Salts are written to the gitignored `.seed-secrets.json` before any bid.
 - **v1, superseded.** The first deployment's chart showed the auction winners being undercut by the very next curve buy, so the contract was changed (buys never below the clearing price, test above) and redeployed. Lessons from the v1 run that are now fixed: the seed script kept salts only in memory and stopped when kai ran dry (wave-2 bids could never be revealed, a real test of the unrevealed-bid path); the app's `send` read a stale address right after a first connect; the auction card claimed a sealed bid before it confirmed; the dare's Finalize button appeared on the local clock a moment before Fuji's block clock passed the window. v1's test AVAX was recovered by redeeming everything (`scripts/fuji/recover.ts`).
 - **Finality.** Times are taken from the RPC accepting the signed transaction. "Final block" = the including block's `timestampMilliseconds` minus this machine's clock at broadcast (it trusts the local clock and is dropped when negative); "receipt" = when the public RPC first returned the receipt, polled every 60 ms.
-- **Web flow.** `scripts/qa-flow.ts` exports nothing itself; it serves `web/dist-qa` (the QA-signer build) on port 5392, injects the QA test key into the page at runtime, approves each call against the budget, and drives the real UI: launch a dare post, bid, reveal, settle, claim the refund, buy 5, sell 2, redeem 1, post proof, vote, finalize, claim the returned bond. Screenshots of each step are in `orchestration/shots/avax-juno/flow/`.
+- **Web flow.** `scripts/qa-flow.ts` exports nothing itself; it serves `web/dist-qa` (the QA-signer build) on port 5392, injects the QA test key into the page at runtime, approves each call against the budget, and drives the real UI: launch a dare post, bid, reveal, settle, claim the refund, buy 5, sell 2, redeem 1, post proof, vote, finalize, claim the returned bond. Screenshots of each step: v1 run in `orchestration/shots/avax-juno/flow/`, v2 runs in `orchestration/shots/avax-juno/v2/flow-1440/` and `flow-375/`.
 
 ## Known limits
+
+- Hide your bag: shield and unshield amounts are public ERC-20 transfers; a bag that has only ever received deposits is derivable from them (upstream uses fixed randomness for deposits). Privacy begins with a private transfer. Shielded coins do not count as dare votes (the vault holds them).
 
 - The bid's reveal is public: once a bidder reveals, the amount and price are on-chain. Bids stay hidden only until the reveal window (see README on eERC).
 - Dare votes are weighted by balance at finalization; someone can still buy in before the window closes to swing a vote, paying the 21% buy overhead to do it.
