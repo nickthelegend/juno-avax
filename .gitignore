@@ -18,3 +18,4 @@ dist-qa/
 contracts/out-eerc/
 contracts/cache-eerc/
 web/public/eerc/
+api/out/

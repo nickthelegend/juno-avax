@@ -210,6 +210,14 @@ export type BidView = {
   refund: bigint;
 };
 
+/** Public Fuji RPCs for servers and scripts: publicnode first (the official endpoint rate-limits busy IPs). */
+export const FUJI_RPCS = ['https://avalanche-fuji-c-chain-rpc.publicnode.com', FUJI_RPC];
+
+/** A fallback transport over the public Fuji RPCs (for wallet clients that send). */
+export function fujiTransport(rpcs: string[] = FUJI_RPCS) {
+  return fallback(rpcs.map((url) => http(url, { timeout: 12_000, retryCount: 2 })));
+}
+
 export function client(rpcs: string[] = [FUJI_RPC]): PublicClient {
   return createPublicClient({
     chain: fuji,
