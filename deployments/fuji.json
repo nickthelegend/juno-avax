@@ -3258,5 +3258,47 @@
         }
       ]
     }
+  },
+  "gasStation": {
+    "txs": [
+      {
+        "label": "deploy_JunoGasStation",
+        "from": "0xc01CC03d1110675922A76fdB7406931C1eC167d8",
+        "to": "0x45fdcdf64f6fa312b02b98ad248461c6a02e722a",
+        "hash": "0x2403c999ef7ec2b0fd3bb8d8eb41e1001702efbe84d765f76028c63c2b004dde",
+        "status": "success",
+        "block": 60950944,
+        "confirmMs": 2277,
+        "at": "2026-11-12T14:27:42.601Z"
+      },
+      {
+        "label": "fund_station_kai",
+        "from": "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A",
+        "to": "0x45fdcdf64f6fa312b02b98ad248461c6a02e722a",
+        "hash": "0xcf80e836482e331deed5d0fee26b53b927edc0e5039f324ab9588869b8c7eae2",
+        "status": "success",
+        "block": 60950946,
+        "confirmMs": 1615,
+        "at": "2026-11-12T14:27:45.827Z"
+      },
+      {
+        "label": "fund_relayer_gas",
+        "from": "0xe835b669d95Cfe37C8f4fa2c31C371cafF08C36b",
+        "to": "0x16e8e2ab4ab129389162dD8604E72A49724f6CA9",
+        "hash": "0x509ea48e366185f498c331cd7e4bc1ee6ca9725c49cdbed47c97f2de367a86d8",
+        "status": "success",
+        "block": 60950949,
+        "confirmMs": 1875,
+        "at": "2026-11-12T14:27:49.496Z"
+      }
+    ],
+    "address": "0x45fdcdf64f6fa312b02b98ad248461c6a02e722a",
+    "config": {
+      "dripAvax": "0.008",
+      "dailyCap": 12,
+      "perRequesterDaily": 3,
+      "relayer": "0x16e8e2ab4ab129389162dD8604E72A49724f6CA9",
+      "owner": "0xc01CC03d1110675922A76fdB7406931C1eC167d8"
+    }
   }
 }

@@ -25,6 +25,8 @@ import {
 import { factoryAbi, postAbi } from './abi';
 
 export { factoryAbi, postAbi };
+export { gasStationAbi } from './abi';
+export * from './gas';
 
 export const FUJI_CHAIN_ID = 43113;
 export const FUJI_RPC = 'https://api.avax-test.network/ext/bc/C/rpc';
