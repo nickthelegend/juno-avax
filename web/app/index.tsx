@@ -67,7 +67,7 @@ function Onboarding() {
             <Dot />
             <NetworkText>{`${NETWORK_NAME} · test AVAX, no real money`}</NetworkText>
           </Network>
-          <Display>Every post{"\n"}is a market.</Display>
+          <Display>Every post{"\n"}is a coin.</Display>
           <Body muted>
             Post a photo and it launches its own coin on Avalanche, with a sealed-bid opening, a bonding curve and a floor you can always redeem.
           </Body>

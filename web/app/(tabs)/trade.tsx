@@ -152,7 +152,7 @@ export default function TradeScreen() {
             <View style={{ gap: 14 }}>
               <Intro
                 pill="Fuji testnet"
-                title="Every post is a market."
+                title="Every post is a coin."
                 body="Each post is its own coin: a sealed-bid opening, then a bonding curve priced in AVAX, with a floor every holder can redeem."
               />
               {markets.data!.posts.map((coin) => (
@@ -187,7 +187,7 @@ export default function TradeScreen() {
 /** What this list is, once, in the app's one dark panel. */
 function Intro({
   pill = "Fuji testnet",
-  title = "Every post is a market.",
+  title = "Every post is a coin.",
   body = "",
 }: {
   pill?: string;
