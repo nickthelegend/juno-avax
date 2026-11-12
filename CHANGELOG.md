@@ -2,6 +2,20 @@
 
 All notable changes to Juno on Avalanche. Versions are local git tags. Nothing is pushed by the build agent.
 
+## v2.2 — 2026-11-12 (ship round)
+
+### Added
+- **Standalone iOS Simulator app**: Release build with Juno's own icon and splash, zipped and hosted at `/download/Juno-iOS-Simulator.zip` with its SHA-256 and a manifest (`web/scripts/build-ios-sim.sh`). Installed from the hosted zip, it made a keychain wallet, got its drip and bought on Fuji.
+- **Get the app** on the landing: iOS Simulator download with the one-line install, an Expo Go QR slot ("Setup required" until published), and the web app.
+- **Expo publish, ready to run**: `eas.json` for Fuji, `runtimeVersion`, and `web/scripts/publish-expo.sh` (one command after `npx expo login`).
+- `docs/SCREEN-AUDIT.md`: every route and state at 1440 and 375, plus the native screens, before and after.
+
+### Fixed
+- Landing: the nav no longer floats over every section; the phone mock showed a NEAR screenshot and now shows the Avalanche feed; error and setup boxes keep their padding; the hero sub-line says who it is for.
+- Private bags, Your bag signed out: the empty-state art no longer spills over the hero and tabs.
+- Shorter copy for the sealed-bid card, the floor panel, shield/send/unshield, create bag and the profile empty state.
+- The Xcode bundle-script plugin no longer unquotes SDK 58's template (which broke Release builds from a path with a space).
+
 ## v2.1 — 2026-11-13
 
 ### Added

@@ -26,6 +26,8 @@ Juno is a social app where every post is a coin, built so that neither happens.
 - **Ask Juno AI.** On any coin, a Claude agent explains how the opening cleared, where the floor sits and who holds it, from live Fuji reads shown as tool chips. It reads; it never trades.
 - **Tip the creator privately.** Holders can send the creator part of their bag through the eERC vault; only the two of them and the auditor see the amount.
 
+- **Get the app.** A standalone iOS Simulator build (its own icon and splash, not Expo Go) downloads from the landing with its SHA-256 and a one-line `xcrun simctl install`. That exact zip made a wallet and traded on Fuji. Expo Go publishing is one command once Nick signs in to Expo.
+
 It runs on the Avalanche Fuji C-Chain end to end: a JunoFactory deploys one contract per post (the ERC-20, the auction, the curve, the vault and the dare). The app (web, and iOS/Android through Expo) reads everything from the contracts with no indexer, signs with the person's own wallet (Core first) or the in-app Juno wallet, simulates every call before the wallet opens, and shows how long Avalanche took to make each transaction final — measured from broadcast to the block's own millisecond timestamp.
 
 Live on Fuji:
@@ -43,7 +45,7 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 - **Wallets:** EIP-6963 discovery with Core listed first, `wallet_switchEthereumChain` / `wallet_addEthereumChain` for Fuji; the Juno wallet (device key) for a zero-setup start.
 - **JunoGasStation (Fuji):** starter AVAX for brand-new wallets, signature-bound, once per wallet, daily and per-requester caps enforced on-chain; relayed by Juno's API on Vercel. 21 Forge tests + a judge-path test; 8 live API tests incl. a real drip.
 - **Juno AI:** `claude-haiku-5-5` via Juno's API (key server-side only) with five read-only tools over live Fuji; 6 live tests incl. a real answer.
-- **App:** Expo Router (React Native for web, Expo SDK 58), static export on Vercel and the same app in Expo Go on iOS/Android; viem for reads and calldata; `@juno/sdk` mirrors the contract maths.
+- **App:** Expo Router (React Native for web, Expo SDK 58), static export on Vercel, a standalone iOS Simulator build (download on the landing) and the same app in Expo Go; viem for reads and calldata; `@juno/sdk` mirrors the contract maths.
 - **eERC (bonus):** Ava Labs' EncryptedERC ([ava-labs/EncryptedERC@8dc98cd](https://github.com/ava-labs/EncryptedERC/tree/8dc98cd4d63ad3aa6d86b70b8f4bbcd70f1e8be1)), unchanged, in converter mode with production verifiers and an auditor. Our client crypto (BabyJubJub ElGamal, Poseidon ciphertexts, proof inputs) is in `sdk/src/eerc.ts`, and Groth16 proofs are built in the browser with snarkjs. 26 checks run on Anvil with real proofs, including replayed, tampered, wrong-sender and wrong-chain attacks.
 - **Mainnet readiness:** `scripts/mainnet/deploy.ts` (dry run by default; a guarded broadcast for Nick to run) and `scripts/deploy-mainnet.md`. Not deployed.
 - **ICM:** probed only. One Teleporter message from Fuji C-Chain reached Echo through the public relayer, but no ICM/ICTT feature ships, so none is claimed. No own L1.
@@ -53,6 +55,7 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 
 - Repo: (GitHub link — Nick to push)
 - Live app: https://juno-avax.vercel.app (Fuji testnet)
+- iOS Simulator app: https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip (SHA-256 `f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913`; `xcrun simctl install booted Juno.app`)
 - Demo video (≤ 3 min): (to record)
 - Slides: `docs/SLIDES.md`
 - Juno API health (gas station balance, AI configured): https://juno-avax-api.vercel.app/api/health

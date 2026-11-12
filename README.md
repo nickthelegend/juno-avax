@@ -6,7 +6,16 @@ Launchpads reward whoever gets the first transaction in, and leave holders with 
 
 And because every post coin is a public ERC-20, holders can **hide their bag**: shield it into an eERC vault (Ava Labs' EncryptedERC), move it privately, and unshield to sell. Whales and copy-trade bots see the vault, not you.
 
-Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace). eERC vault: [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac). Gas station: [`0x45fdcdf64f6fa312b02b98ad248461c6a02e722a`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a). Version **v2.1** (see [CHANGELOG.md](CHANGELOG.md)).
+Live on **Avalanche Fuji C-Chain** (43113). Factory: [`0xac736951c75e849e7db40b333cc0dff2baf88539`](https://testnet.snowtrace.io/address/0xac736951c75e849e7db40b333cc0dff2baf88539) (source verified on Snowtrace). eERC vault: [`0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac`](https://testnet.snowtrace.io/address/0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac). Gas station: [`0x45fdcdf64f6fa312b02b98ad248461c6a02e722a`](https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a). Version **v2.2** (see [CHANGELOG.md](CHANGELOG.md)). Screen audit: [docs/SCREEN-AUDIT.md](docs/SCREEN-AUDIT.md).
+
+## Get the app
+
+- **iOS Simulator (standalone, not Expo Go):** [Juno-iOS-Simulator.zip](https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip) (15.5 MB, v4.0.0, Release build for Apple-silicon simulators, ad-hoc signed; SHA-256 `f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913`, also at [`.sha256`](https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip.sha256)). Unzip it, boot a simulator, then `xcrun simctl install booted Juno.app` (and `xcrun simctl launch booted app.launch.junoavax`). It has its own icon and splash and the JS bundle inside. This exact zip made a keychain wallet, got its drip and bought 10 SPROUT on Fuji (`deployments/fuji.json` → `standaloneIosRun`).
+- **Expo Go:** not published yet. The Mac isn't signed in to Expo, and only Nick can sign in. After `npx expo login`, run `web/scripts/publish-expo.sh`. It runs `eas init`, then `eas update` on the production branch, writes the Expo Go link into `/download/manifest.json` and redeploys. The landing's QR slot says "Setup required" until then.
+- **Browser:** https://juno-avax.vercel.app, with nothing to install (below).
+- **Android APK:** not built. Disk on the build Mac was under 8 GB after the iOS build.
+
+Rebuild the simulator app with `web/scripts/build-ios-sim.sh`. It takes the shared Xcode lock, and the zip, its hash and the manifest go to `web/public/download/`.
 
 ## Try it with nothing installed
 
@@ -406,7 +415,7 @@ contracts/   Foundry: JunoFactory, JunoPost, CurveMath, JunoGasStation + 93 test
              invariant, gas station, judge path)
              lib/EncryptedERC: Ava Labs' eERC, pinned submodule (Ecosystem License), built by FOUNDRY_PROFILE=eerc
 sdk/         @juno/sdk: viem reads, ABIs, the contract maths in TypeScript; @juno/sdk/eerc: eERC client crypto
-web/         the Juno app (Expo Router: static web export, and iOS/Android in Expo Go)
+web/         the Juno app (Expo Router: static web export, a standalone iOS Simulator build, and Expo Go)
 api/         Juno API on Vercel: /api/gas (JunoGasStation relayer), /api/ask (Juno AI), /api/health
 scripts/     Fuji keys, funding, deploy, seeding, the web QA flows, evidence tables
              eerc/ (vault deploy, Anvil end-to-end), mainnet/ (guarded deploy), icm/ (relayer probe)

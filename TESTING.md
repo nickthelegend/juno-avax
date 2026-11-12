@@ -1,6 +1,6 @@
 # Testing
 
-Recorded on 12 November 2026 (v2.1; v2.0 rows unchanged unless noted). Every number below came from running the command next to it.
+Recorded on 12 November 2026 (v2.2 ship round; earlier rows unchanged unless noted). Every number below came from running the command next to it.
 
 | Suite | Command | Result |
 | --- | --- | --- |
@@ -10,6 +10,8 @@ Recorded on 12 November 2026 (v2.1; v2.0 rows unchanged unless noted). Every num
 | Juno API on live Fuji (gas sponsor, Juno AI) | `cd api && pnpm test` | **14 passed, 0 failed** (8 gas incl. one real 0.008 AVAX drip; 6 Juno AI incl. one real `claude-haiku-5-5` answer) |
 | Zero-setup judge path on the hosted app, 1440 and 375 (live chain) | `QA_WIDTH=1440 npx tsx scripts/qa-hosted-judge.ts` (and 375) | **11/11 txs each**, 0 console errors; `deployments/fuji.json` → `judgeRuns` |
 | Native app in the iOS Simulator (Expo Go 58) | manual, Metro on port 8092 | drip, launch, bid, settle, buy, sell confirmed on Fuji; `deployments/fuji.json` → `iosRun` |
+| Standalone iOS Simulator build (the hosted zip) | `web/scripts/build-ios-sim.sh`, then `xcrun simctl install booted Juno.app` | Release arm64 build succeeded; installed from the downloaded zip (SHA-256 matches the hosted `.sha256`); keychain wallet, drip and a buy of 10 SPROUT final in 0.10 s on Fuji; `deployments/fuji.json` → `standaloneIosRun`; screenshots `orchestration/shots/avax-juno/ship/ios/` |
+| Ship-round screen audit, 1440 and 375 | `SHOTS_BASE=https://juno-avax.vercel.app node scripts/shots.mjs` (before), `node scripts/shots.mjs` (after), `node scripts/landing-sections.mjs` | before 34/34, after 34/34 with 0 console errors and no sideways scroll; landing sections at both widths: download HTTP 200, Copy works, Expo Go shows Setup required; [docs/SCREEN-AUDIT.md](docs/SCREEN-AUDIT.md) |
 | Web unit tests (accounting, price window, QA signer policy incl. vault rules) | `pnpm --filter juno-avax-web test` | **13 passed, 0 failed** |
 | Web typecheck | `cd web && npx tsc --noEmit` | 0 errors |
 | Web static export (hostable) | `pnpm web:export` | builds `web/dist` with `/eerc/` circuits |
