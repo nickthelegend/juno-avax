@@ -3,8 +3,8 @@ export const DEPLOYMENT = {
   "factory": "0xac736951c75e849e7db40b333cc0dff2baf88539",
   "factoryTx": "0xdc72b603c6ab6c4f80aa2db93ad74918216b89a6e21ce6a52cc5c020db712d5c",
   "medianMs": 1844,
-  "blockMedianMs": 240,
-  "measuredTxs": 55,
+  "blockMedianMs": 236,
+  "measuredTxs": 75,
   "names": {
     "0xB9F0CdB519F419E26B19A92fFab080f974390037": "mira",
     "0x90b5863e2c976a2a6Ea815839B35B57e470e7B4A": "kai",

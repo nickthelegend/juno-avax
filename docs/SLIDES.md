@@ -68,7 +68,7 @@ Visual: ROOFTOP's dare card — bond, proof, vote bar, "Holders accepted".
 
 ## 6. Live on Fuji, end to end.
 
-- JunoFactory (verified on Snowtrace) and six posts, all read live by the app.
+- JunoFactory (verified on Snowtrace) and 7 seeded posts plus the web-app posts, all read live by the app.
 - Every seeded transaction from three test accounts recorded with its timing (README tables).
 - One full run driven through the web app in headless Chrome: launch, bid,
   reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim.

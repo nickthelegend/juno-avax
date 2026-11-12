@@ -23,7 +23,7 @@ Juno is a social app where every post is a coin, built so that neither happens.
 
 It runs on the Avalanche Fuji C-Chain end to end: a JunoFactory deploys one contract per post (the ERC-20, the auction, the curve, the vault and the dare). The web app reads everything from the contracts with no server or indexer, signs with the person's own wallet (Core first), simulates every call before the wallet opens, and shows how long Avalanche took to make each transaction final — measured from broadcast to the block's own millisecond timestamp.
 
-Live on Fuji: the factory (source verified on Snowtrace), six posts, 55 seeded transactions from three test accounts (median 0.24 s from broadcast to a final block), and one full flow driven through the web app (launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim).
+Live on Fuji: the factory (source verified on Snowtrace), 7 seeded posts plus the posts launched from the web app, 75 seeded transactions from three test accounts (median 0.24 s from broadcast to a final block), and one full flow driven through the web app (launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim).
 
 ## Tech stack
 

@@ -58,6 +58,8 @@ Payouts that can wait are pulled (refunds, creator earnings); sells and redempti
 | Post `rooftop` (JunoPost + its ERC-20) | [`0xda23789f6D450793093Bf079c1Dc3B94D0aFce9B`](https://testnet.snowtrace.io/address/0xda23789f6D450793093Bf079c1Dc3B94D0aFce9B) |
 | Post `balloons` (JunoPost + its ERC-20) | [`0x48604BA5590180a2386297F8E45B3Edde7C804D4`](https://testnet.snowtrace.io/address/0x48604BA5590180a2386297F8E45B3Edde7C804D4) |
 | Post `night-swim` (JunoPost + its ERC-20) | [`0x48FCE68864116bA594Ae8C7412759F8BE86E1026`](https://testnet.snowtrace.io/address/0x48FCE68864116bA594Ae8C7412759F8BE86E1026) |
+| Post `sunset-dump` (JunoPost + its ERC-20) | [`0x12D9a65e6ca502e65c847214aFB82b7049E139BF`](https://testnet.snowtrace.io/address/0x12D9a65e6ca502e65c847214aFB82b7049E139BF) |
+| Post `glow-up` (JunoPost + its ERC-20) | [`0x628dD88892F45d416AAdC0185407f726A0929e9b`](https://testnet.snowtrace.io/address/0x628dD88892F45d416AAdC0185407f726A0929e9b) |
 | Post `qa-11120941` (launched from the web app) | [`0x1701D2B17613242E978841349cf316938118010F`](https://testnet.snowtrace.io/address/0x1701D2B17613242E978841349cf316938118010F) |
 
 ### One full flow from the web app (12/12 succeeded)
@@ -81,7 +83,7 @@ Driven through the web build in headless Chrome by `scripts/qa-flow.ts` with the
 
 An earlier QA run (post [`0x93Fe6327e9e05594c15EBEC1716d4619433D4CD9`](https://testnet.snowtrace.io/address/0x93Fe6327e9e05594c15EBEC1716d4619433D4CD9)) stopped after its sealed bid because a test-harness locator matched two elements; that post was closed by script: settle bid never revealed [0x2fdbdacc…](https://testnet.snowtrace.io/tx/0x2fdbdacc11091906b3d8c6259a75f2b12b112761ed530f579c504282f8ffb9ff), refund minus 1pct [0x1a3d2682…](https://testnet.snowtrace.io/tx/0x1a3d26826945d4e80263c15010896b77b56fce8ffa94e7979fa0783f16259728), finalize no holders bond returns [0xcf3079a5…](https://testnet.snowtrace.io/tx/0xcf3079a509e93352176383378d25285c775986aa2701554f7568556450ed6470), creator withdraws bond and penalty [0xe155c874…](https://testnet.snowtrace.io/tx/0xe155c87402451ecab68d7c427ac4360708a18385cf67f048c40111aa6fda07a6).
 
-### Seeded on Fuji (55 transactions, 0 failed)
+### Seeded on Fuji (75 transactions, 0 failed)
 
 Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts`; every call made by `scripts/fuji/seed.ts`.
 
@@ -142,8 +144,28 @@ Three test accounts (mira, kai, oto) created and funded by `scripts/fuji/fund.ts
 | 53 | rooftop creator withdraws bond | oto | [0x4ce816f0…](https://testnet.snowtrace.io/tx/0x4ce816f0a825a58036a16926087d7fb684c605ed68b36c641cff0a3c712ab85e) | 0.27 s | 1.87 s |
 | 54 | night swim finalize no proof bond to floor | mira | [0x4ef73c3d…](https://testnet.snowtrace.io/tx/0x4ef73c3d0230eefb5e0d393272da9a48f68973913ab5dd98f530d8903d7fa3b4) | 0.81 s | 2.35 s |
 | 55 | night swim redeem 10 with bond in floor | mira | [0xaed0e7aa…](https://testnet.snowtrace.io/tx/0xaed0e7aa8560f7887179a7f18a72b87ab31f945563a96a92bffbc117c741028d) | 0.23 s | 2.10 s |
+| 56 | create post sunset-dump | oto | [0x48e8a35f…](https://testnet.snowtrace.io/tx/0x48e8a35fe95ecbdea68706d73dedec109dc30dd9ce54592957015b2202e1861c) | 0.96 s | 2.09 s |
+| 57 | create post glow-up | mira | [0xf925f4a1…](https://testnet.snowtrace.io/tx/0xf925f4a1b5ab52e0a160b85501aa7454f2ba1c4de6bae120fc31cf8625a3ee1b) | 0.90 s | 2.32 s |
+| 58 | sunset-dump sealed bid mira | mira | [0x9bf4ef4d…](https://testnet.snowtrace.io/tx/0x9bf4ef4d734fbf11e78ff2e4237721b2941016fd462efa11b283be91b4697db0) | 0.19 s | 1.41 s |
+| 59 | sunset-dump sealed bid kai | kai | [0x14f70a7e…](https://testnet.snowtrace.io/tx/0x14f70a7eeb82508432f81d8a895c05c70a082a4bfa78cc33f7b5429e134bf1a0) | 0.14 s | 1.60 s |
+| 60 | glow-up sealed bid oto | oto | [0x4f9af054…](https://testnet.snowtrace.io/tx/0x4f9af054ee5940e1c6f89db5149d1fae7a90752fabda8cb5b8891ba8f931dd10) | 0.01 s | 1.37 s |
+| 61 | glow-up sealed bid kai | kai | [0xf4e3cdb9…](https://testnet.snowtrace.io/tx/0xf4e3cdb9c2649d832bc18365db6548e15ca8eb6d19069d665bb9a1f54db8c749) | 0.10 s | 1.84 s |
+| 62 | sunset-dump reveal mira | mira | [0x9c93bfdf…](https://testnet.snowtrace.io/tx/0x9c93bfdf72a48a6efe2cb9f586fe397095c0a9b30ead4ddcb21dc757f199ba04) | — | 1.61 s |
+| 63 | sunset-dump reveal kai | kai | [0xf0f0a030…](https://testnet.snowtrace.io/tx/0xf0f0a0309c098309346e2c63d070338d7d8716397de9472ce04818c57cc42b34) | 0.12 s | 1.62 s |
+| 64 | glow-up reveal oto | oto | [0x39e6a7c5…](https://testnet.snowtrace.io/tx/0x39e6a7c51e05a96c216a4de92514210dba113e9f72a328f9141584df269c6de8) | 0.56 s | 2.09 s |
+| 65 | glow-up reveal kai | kai | [0x75dce533…](https://testnet.snowtrace.io/tx/0x75dce533b3c930f2e655357bc19a3ec70efae925462ad712213cfbf579157d97) | 0.74 s | 2.08 s |
+| 66 | sunset-dump settle | oto | [0x2d574d2b…](https://testnet.snowtrace.io/tx/0x2d574d2b436af106318d7ea54f724e445cf29749a445569278533fdaceb7b72f) | 0.18 s | 1.63 s |
+| 67 | sunset-dump refund mira | mira | [0x0a5f8ad6…](https://testnet.snowtrace.io/tx/0x0a5f8ad6b7bbb3f2788069fff4c2765d2c7fb60f548c1b93bed2dee704a008d8) | 0.70 s | 2.09 s |
+| 68 | sunset-dump refund kai | kai | [0x582944c8…](https://testnet.snowtrace.io/tx/0x582944c8047d51d32eb37a49757edf9400c6ff6160ee4c8ce1af5911ea8458c3) | 0.18 s | 1.85 s |
+| 69 | sunset dump buy 20 | mira | [0x7e62f2a4…](https://testnet.snowtrace.io/tx/0x7e62f2a42f841990c1088aeac522dd9e16848ac71e91d7ef6127a61696429780) | 0.53 s | 1.85 s |
+| 70 | sunset dump buy 12 | kai | [0x45bf569c…](https://testnet.snowtrace.io/tx/0x45bf569c39b1122954cb14a760c4ec9ad6674f8b96bcd64072f8d324712ae237) | 0.68 s | 60.36 s |
+| 71 | glow-up settle | mira | [0x564de254…](https://testnet.snowtrace.io/tx/0x564de254314c4afcf181b8a9944df63b9b1eeb19a1bbb60489dcafbf3fa20e14) | 0.39 s | 2.08 s |
+| 72 | glow-up refund oto | oto | [0xb348699a…](https://testnet.snowtrace.io/tx/0xb348699ac418d4a121daf506ccbf6591b0c549fb9df8fa95489f02a7147be946) | 0.19 s | 1.61 s |
+| 73 | glow-up refund kai | kai | [0x9d405227…](https://testnet.snowtrace.io/tx/0x9d4052276c4268592116a36066a9dc80b4ba2b3bd63c1f1f8832bce865980cd6) | 0.15 s | 1.62 s |
+| 74 | glow up buy 25 | oto | [0xf498678e…](https://testnet.snowtrace.io/tx/0xf498678e89a3a4ab96f51166350448bc24eb97d3d81d8cb82c51cfae97bc96d8) | 0.20 s | 1.85 s |
+| 75 | glow up sell 5 | oto | [0x66f42f2c…](https://testnet.snowtrace.io/tx/0x66f42f2c4a2fe711371a8972749f0c0dfb1b7b1c424e2c995c16162a099536c4) | 0.13 s | 1.61 s |
 
-Across the 55 seeded transactions: median **0.24 s** from broadcast to a final block (p90 0.71 s, over the 53 where this machine's clock was not ahead of the block's), and 1.84 s until the public RPC returned the receipt (p90 2.10 s). "Final block" is the including block's `timestampMilliseconds` minus this machine's clock at broadcast.
+Across the 75 seeded transactions: median **0.24 s** from broadcast to a final block (p90 0.73 s, over the 72 where this machine's clock was not ahead of the block's), and 1.84 s until the public RPC returned the receipt (p90 2.10 s). "Final block" is the including block's `timestampMilliseconds` minus this machine's clock at broadcast.
 
 ### Superseded: v1
 
