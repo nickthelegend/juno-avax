@@ -2431,79 +2431,6 @@
       "oto-shield-glow-up": true
     }
   },
-  "qaVault": {
-    "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs",
-    "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
-    "coin": "0x1701D2B17613242E978841349cf316938118010F",
-    "width": 1440,
-    "steps": [
-      {
-        "label": "register",
-        "functionName": "register",
-        "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
-        "value": "0",
-        "hash": "0x519520e9c911be6afb7d3999b28d6e9bf016ed166155fe4345abd6568ae66796",
-        "status": "success",
-        "block": 60942953,
-        "confirmMs": 1624,
-        "blockMs": 200,
-        "gasUsed": 319554,
-        "at": "2026-11-12T11:01:27.587Z"
-      },
-      {
-        "label": "shield",
-        "functionName": "approve",
-        "to": "0x1701D2B17613242E978841349cf316938118010F",
-        "value": "0",
-        "hash": "0x7cc84d7ff5f8010cf8684dd75fa41b501c59172d5d9899ad1a3261e66f31288c",
-        "status": "success",
-        "block": 60942968,
-        "confirmMs": 1862,
-        "blockMs": 803,
-        "gasUsed": 45924,
-        "at": "2026-11-12T11:01:46.646Z"
-      },
-      {
-        "label": "shield",
-        "functionName": "deposit",
-        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
-        "value": "0",
-        "hash": "0x279fd13ca5f02b6e61b07be9881c5b4bc579ea155c37a5d335972f9c67cb42a2",
-        "status": "success",
-        "block": 60942970,
-        "confirmMs": 1894,
-        "blockMs": 224,
-        "gasUsed": 604201,
-        "at": "2026-11-12T11:01:50.162Z"
-      },
-      {
-        "label": "send_private",
-        "functionName": "transfer",
-        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
-        "value": "0",
-        "hash": "0x466fb83e2438adf8b0dbee3147f8d25a76a5999a8d8fb50a7c646407eb04cc33",
-        "status": "success",
-        "block": 60942979,
-        "confirmMs": 1614,
-        "blockMs": 126,
-        "gasUsed": 1124153,
-        "at": "2026-11-12T11:01:58.787Z"
-      },
-      {
-        "label": "unshield",
-        "functionName": "withdraw",
-        "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
-        "value": "0",
-        "hash": "0x9e2bc86648bb1bc8e897dd4efdba6f9bd7bf83989be63cec429488e536e236e2",
-        "status": "success",
-        "block": 60942985,
-        "confirmMs": 1606,
-        "blockMs": 33,
-        "gasUsed": 575920,
-        "at": "2026-11-12T11:02:06.764Z"
-      }
-    ]
-  },
   "icmProbe": {
     "note": "scripts/icm/probe.ts: one Teleporter message Fuji C-Chain -> Echo, no relayer fee",
     "tx": "0xe47dac771067e3a763a85e94608f9610029e40db69f926aba38c3240e36a3efc",
@@ -2513,5 +2440,149 @@
     "delivered": true,
     "waitedSeconds": 0,
     "at": "2026-11-12T11:05:53.993Z"
+  },
+  "qaVaultRuns": {
+    "1440": {
+      "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs",
+      "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
+      "coin": "0x1701D2B17613242E978841349cf316938118010F",
+      "width": 1440,
+      "steps": [
+        {
+          "label": "register",
+          "functionName": "register",
+          "to": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",
+          "value": "0",
+          "hash": "0x519520e9c911be6afb7d3999b28d6e9bf016ed166155fe4345abd6568ae66796",
+          "status": "success",
+          "block": 60942953,
+          "confirmMs": 1624,
+          "blockMs": 200,
+          "gasUsed": 319554,
+          "at": "2026-11-12T11:01:27.587Z"
+        },
+        {
+          "label": "shield",
+          "functionName": "approve",
+          "to": "0x1701D2B17613242E978841349cf316938118010F",
+          "value": "0",
+          "hash": "0x7cc84d7ff5f8010cf8684dd75fa41b501c59172d5d9899ad1a3261e66f31288c",
+          "status": "success",
+          "block": 60942968,
+          "confirmMs": 1862,
+          "blockMs": 803,
+          "gasUsed": 45924,
+          "at": "2026-11-12T11:01:46.646Z"
+        },
+        {
+          "label": "shield",
+          "functionName": "deposit",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0x279fd13ca5f02b6e61b07be9881c5b4bc579ea155c37a5d335972f9c67cb42a2",
+          "status": "success",
+          "block": 60942970,
+          "confirmMs": 1894,
+          "blockMs": 224,
+          "gasUsed": 604201,
+          "at": "2026-11-12T11:01:50.162Z"
+        },
+        {
+          "label": "send_private",
+          "functionName": "transfer",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0x466fb83e2438adf8b0dbee3147f8d25a76a5999a8d8fb50a7c646407eb04cc33",
+          "status": "success",
+          "block": 60942979,
+          "confirmMs": 1614,
+          "blockMs": 126,
+          "gasUsed": 1124153,
+          "at": "2026-11-12T11:01:58.787Z"
+        },
+        {
+          "label": "unshield",
+          "functionName": "withdraw",
+          "to": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
+          "value": "0",
+          "hash": "0x9e2bc86648bb1bc8e897dd4efdba6f9bd7bf83989be63cec429488e536e236e2",
+          "status": "success",
+          "block": 60942985,
+          "confirmMs": 1606,
+          "blockMs": 33,
+          "gasUsed": 575920,
+          "at": "2026-11-12T11:02:06.764Z"
+        }
+      ]
+    }
+  },
+  "qaRuns": {
+    "1440": {
+      "note": "Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts",
+      "account": "0xB490723D988BD713374D9c6Efd875614B89770fe",
+      "slug": "qa-11121108",
+      "post": "0x37f124557feed5f292AB80De1379f133bcdC6B62",
+      "width": 1440,
+      "steps": [
+        {
+          "label": "createPost",
+          "functionName": "createPost",
+          "to": "0xac736951c75e849e7db40b333cc0dff2baf88539",
+          "value": "2000000000000000",
+          "hash": "0xc8bb6ecabc6645c1eb51f6c0f25ea563dc72f21a076eabb6b36b38402bd3de93",
+          "status": "success",
+          "block": 60943179,
+          "confirmMs": 1413,
+          "blockMs": null,
+          "gasUsed": 3985533,
+          "at": "2026-11-12T11:08:27.542Z"
+        },
+        {
+          "label": "commit",
+          "functionName": "commit",
+          "to": "0x37f124557feed5f292ab80de1379f133bcdc6b62",
+          "value": "5000000000000000",
+          "hash": "0xaec183017105ec5693df661623d5fc23685ca08671e1b16ea1d98e3f73f63d07",
+          "status": "success",
+          "block": 60943184,
+          "confirmMs": 1667,
+          "blockMs": 40,
+          "gasUsed": 123858,
+          "at": "2026-11-12T11:08:35.275Z"
+        },
+        {
+          "label": "reveal",
+          "functionName": "reveal",
+          "to": "0x37f124557feed5f292ab80de1379f133bcdc6b62",
+          "value": "0",
+          "hash": "0x1d63beaa3fcf7df9dc4ff6baf0c3f11ace940bbbdb658298090c7f2a81ebc748",
+          "status": "success",
+          "block": 60943214,
+          "confirmMs": 1834,
+          "blockMs": 390,
+          "gasUsed": 64272,
+          "at": "2026-11-12T11:09:34.276Z"
+        },
+        {
+          "label": "settle",
+          "functionName": "settle",
+          "to": "0x37f124557feed5f292ab80de1379f133bcdc6b62",
+          "value": "0",
+          "hash": "0xf5381445799390da11047357f64bf5c513d063adbd88dfb4ce624f8984cffe68",
+          "status": "success",
+          "block": 60943241,
+          "confirmMs": 2200,
+          "blockMs": 738,
+          "gasUsed": 359300,
+          "at": "2026-11-12T11:10:34.294Z"
+        },
+        {
+          "label": "claimRefund",
+          "functionName": "claimRefund",
+          "to": "0x37f124557feed5f292ab80de1379f133bcdc6b62",
+          "value": "0"
+        }
+      ]
+    }
   }
 }

@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(join(root, 'scripts/package.json'));
 const { chromium } = require('playwright-core');
 const { withChromeLock } = await import('/Volumes/Extreme SSD/Projects/grokbot/orchestration/chrome-lock.mjs');
-const OUT = process.env.SHOTS_DIR ?? '/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno';
+const OUT = process.env.SHOTS_DIR ?? '/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/v2';
 const DIST = join(root, 'web/dist');
 const PORT = 5393;
 const d = JSON.parse(readFileSync(join(root, 'deployments/fuji.json'), 'utf8'));
@@ -31,11 +31,17 @@ const routes = [
   [`/coin/${d.posts['pile-in']}`, 'coin-graduated'],
   [`/coin/${d.posts.rooftop}`, 'coin-dare'],
   [`/coin/${d.posts.sprout}`, 'coin-sprout'],
-  ...(d.qaFlow?.post ? [[`/coin/${d.qaFlow.post}`, 'coin-qa']] : []),
+  ...(d.qaRuns?.['1440']?.post ? [[`/coin/${d.qaRuns['1440'].post}`, 'coin-qa']] : d.qaFlow?.post ? [[`/coin/${d.qaFlow.post}`, 'coin-qa']] : []),
+  ...(d.posts['first-ollie'] ? [[`/coin/${d.posts['first-ollie']}`, 'coin-live-dare']] : []),
   [`/trader/${d.accounts.kai}`, 'trader'],
+  ['/vault', 'vault-public'],
+  ['/vault?view=yours', 'vault-yours-signed-out'],
+  ['/vault?view=auditor', 'vault-auditor'],
+  ['/coin/0x0000000000000000000000000000000000000001', 'coin-not-found'],
+  ['/nope', 'not-found'],
 ];
 
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon', '.ttf': 'font/ttf' };
+const types = { '.wasm': 'application/wasm', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon', '.ttf': 'font/ttf' };
 const server = createServer((req, res) => {
   const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0])).replace(/^(\.\.[/\\])+/, '');
   let file = join(DIST, path);

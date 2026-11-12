@@ -32,7 +32,7 @@ const { withChromeLock } = await import('/Volumes/Extreme SSD/Projects/grokbot/o
 
 const PORT = 5392;
 const WIDTH = Number(process.env.QA_WIDTH ?? 1440);
-const SHOTS = '/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/flow';
+const SHOTS = `/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/v2/flow-${WIDTH}`;
 const DIST = join(ROOT, 'web/dist-qa');
 const deployment = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
 const factory = deployment.factory.address as `0x${string}`;
@@ -41,7 +41,7 @@ if (!key) throw Error('Setup required: JUNO_QA_KEY in .env');
 const qa = privateKeyToAccount(key);
 const pub = client();
 const RESUME = process.env.QA_RESUME_POST ?? null; // finish finalize + claim on a post an earlier run left at its dare
-const previous = RESUME ? JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8')).qaFlow : null;
+const previous = RESUME ? JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8')).qaRuns?.[String(WIDTH)] : null;
 const slug = previous?.slug ?? process.env.QA_SLUG ?? `qa-${new Date().toISOString().slice(5, 16).replace(/[-T:]/g, '')}`;
 const say = (s: string) => process.stdout.write(`${new Date().toISOString().slice(11, 19)} ${s}\n`);
 
@@ -52,7 +52,9 @@ let currentLabel = 'launch';
 let postAddress: string | null = RESUME;
 const record = () => {
   const data = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
-  data.qaFlow = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts', account: qa.address, slug, post: postAddress, width: WIDTH, steps };
+  // v2 runs, one per viewport width; v1's single run stays in data.qaFlow.
+  data.qaRuns ??= {};
+  data.qaRuns[String(WIDTH)] = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-flow.ts', account: qa.address, slug, post: postAddress, width: WIDTH, steps };
   writeFileSync(join(ROOT, 'deployments/fuji.json'), `${JSON.stringify(data, null, 2)}\n`);
 };
 
@@ -102,13 +104,16 @@ try {
   await withChromeLock(async () => {
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
     try {
-      const context = await browser.newContext({ viewport: { width: WIDTH, height: 900 }, deviceScaleFactor: 1 });
+      const context = await browser.newContext({ viewport: { width: WIDTH, height: WIDTH < 500 ? 812 : 900 }, deviceScaleFactor: 1 });
       await context.exposeFunction('__JUNO_QA_AUTHORIZE__', authorize);
       await context.exposeFunction('__JUNO_QA_REPORT__', report);
       await context.addInitScript((input: unknown) => Object.defineProperty(window, '__JUNO_QA_SIGNER__', { value: input, writable: true, configurable: true }), { privateKey: key, rpcUrl: QA_RPC_URLS[0], factory });
       const page = await context.newPage();
       const errors: string[] = [];
       page.on('pageerror', (e: Error) => errors.push(String(e)));
+      page.on('response', (r: any) => {
+        if (r.status() >= 400) say(`http ${r.status()} ${r.url().slice(0, 80)} ${(r.request().postData() ?? '').slice(0, 200)}`);
+      });
       page.on('console', (m: { type: () => string; text: () => string }) => {
         if (m.type() === 'error' || m.type() === 'warning') say(`console ${m.type()}: ${m.text().slice(0, 240)}`);
       });

@@ -29,7 +29,7 @@ const { withChromeLock } = await import('/Volumes/Extreme SSD/Projects/grokbot/o
 
 const PORT = 5394;
 const WIDTH = Number(process.env.QA_WIDTH ?? 1440);
-const SHOTS = '/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/v2/flow-vault';
+const SHOTS = `/Volumes/Extreme SSD/Projects/grokbot/orchestration/shots/avax-juno/v2/flow-vault-${WIDTH}`;
 const DIST = join(ROOT, 'web/dist-qa');
 const deployment = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
 const factory = deployment.factory.address as `0x${string}`;
@@ -44,13 +44,14 @@ const say = (s: string) => process.stdout.write(`${new Date().toISOString().slic
 
 type Step = { label: string; functionName: string; to: string; value: string; hash?: Hex; status?: string; block?: number; confirmMs?: number; blockMs?: number | null; gasUsed?: number; at?: string };
 // A rerun after a harness failure keeps the transactions already made.
-const steps: Step[] = deployment.qaVault?.account === qa.address ? deployment.qaVault.steps : [];
+const steps: Step[] = deployment.qaVaultRuns?.[String(WIDTH)]?.steps ?? (WIDTH === 1440 && deployment.qaVault?.account === qa.address ? deployment.qaVault.steps : []);
 let reserved = 0n;
 let currentLabel = 'open';
 const pending: Promise<void>[] = [];
 const record = () => {
   const data = JSON.parse(readFileSync(join(ROOT, 'deployments/fuji.json'), 'utf8'));
-  data.qaVault = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs', account: qa.address, coin: COIN, width: WIDTH, steps };
+  data.qaVaultRuns ??= {};
+  data.qaVaultRuns[String(WIDTH)] = { note: 'Driven through the web app (dist-qa, QA signer build) in headless Chrome by scripts/qa-vault.ts; every proof built in the page with snarkjs', account: qa.address, coin: COIN, width: WIDTH, steps };
   writeFileSync(join(ROOT, 'deployments/fuji.json'), `${JSON.stringify(data, null, 2)}\n`);
 };
 
@@ -100,7 +101,7 @@ try {
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
     try {
       const session = async (key: Hex, run: (page: any) => Promise<void>) => {
-        const context = await browser.newContext({ viewport: { width: WIDTH, height: 900 }, deviceScaleFactor: 1 });
+        const context = await browser.newContext({ viewport: { width: WIDTH, height: WIDTH < 500 ? 812 : 900 }, deviceScaleFactor: 1 });
         await context.exposeFunction('__JUNO_QA_AUTHORIZE__', authorize);
         await context.exposeFunction('__JUNO_QA_REPORT__', report);
         await context.addInitScript((input: unknown) => Object.defineProperty(window, '__JUNO_QA_SIGNER__', { value: input, writable: true, configurable: true }), { privateKey: key, rpcUrl: QA_RPC_URLS[0], factory });

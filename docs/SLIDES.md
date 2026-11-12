@@ -1,4 +1,4 @@
-# Juno on Avalanche — slides (9)
+# Juno on Avalanche — slides (10)
 
 Speaker notes are under each slide. Every number on a slide comes from
 `deployments/fuji.json` or the live app; nothing is projected.
@@ -40,7 +40,7 @@ Visual: the feed at 375 px, the ROOFTOP post with its floor chip.
 
 Visual: the auction card mid-countdown (Bid → Reveal → Settle → Trade).
 
-> Notes: say plainly this is commit-reveal, not eERC (slide 7).
+> Notes: the opening uses commit-reveal, because a clearing-price auction has to read every bid. eERC hides something else: the holder's bag (slide 6).
 
 ---
 
@@ -66,44 +66,50 @@ Visual: ROOFTOP's dare card — bond, proof, vote bar, "Holders accepted".
 
 ---
 
-## 6. Live on Fuji, end to end.
+## 6. Hide your bag.
 
-- JunoFactory (verified on Snowtrace) and 7 seeded posts plus the web-app posts, all read live by the app.
-- Every seeded transaction from three test accounts recorded with its timing (README tables).
-- One full run driven through the web app in headless Chrome: launch, bid,
-  reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim.
+- Every post coin is a public ERC-20, so whale-watchers and copy-trade bots can read who holds how much.
+- Shield any post coin into the Juno eERC vault (Ava Labs' EncryptedERC, converter mode). Your balance becomes an ElGamal ciphertext. Send part of it privately to another holder, and unshield to sell or redeem.
+- What stays public is said plainly: the amounts you shield and unshield. What happens inside the vault is hidden, except from the auditor, whose key every proof must encrypt to.
+- The proofs are built in the browser (snarkjs and the production zkeys). One signature opens your key, and Juno never stores it.
 
-Visual: the Snowtrace page of the factory and the tx table from the README.
+Visual: /vault with the Public view (PILE-IN 63% of supply in private bags), then Your bag (decrypted), then the Auditor view (transfer amounts).
 
----
-
-## 7. Why Avalanche — what is real, and what is not.
-
-- **Real:** sub-second finality, measured on every trade: time from broadcast
-  to a final block (by the block's own millisecond timestamp) and to a
-  readable receipt. The seeded run's medians are in the README.
-- **Real:** C-Chain contracts, Core wallet first (EIP-6963), Fuji throughout.
-- **Not used:** eERC. An auction must read bids to clear them; eERC amounts
-  can only be decrypted by their owner and the auditor. Commit-reveal does
-  the hiding instead.
-- **Not used:** ICM/ICTT. No second chain was needed for this product.
+> Notes: the whale kai shielded 600 PILE-IN and slipped 150 to oto. The public sees a transfer with no amount.
 
 ---
 
-## 8. Built properly.
+## 7. Live on Fuji, end to end.
 
-- 70 Forge tests: auction, curve, floor, dare, factory, attacks (reentrancy,
-  reveal mismatch, late bids, copied commitments, floor drain) and a
-  solvency invariant over 2,560 random calls.
-- Shared golden values between Solidity and the TypeScript SDK.
+- JunoFactory (verified on Snowtrace), the eERC vault, 10 seeded posts plus the posts launched from the web app. The app reads all of it live.
+- Every seeded transaction is recorded with its timing (README tables).
+- Driven through the web app in headless Chrome at 1440 px and at 375 px: launch, bid, reveal, settle, refund, buy, sell, redeem, proof, vote, finalize, claim. Then register, shield, send privately, unshield and the auditor view.
+
+Visual: the Snowtrace pages of the factory and the vault, and the tx tables from the README.
+
+---
+
+## 8. Why Avalanche: what is real, and what is not.
+
+- **Real:** sub-second finality, measured on every trade from broadcast to a final block (by the block's own millisecond timestamp).
+- **Real:** eERC. Ava Labs' EncryptedERC, unchanged and pinned, with an auditor, used for private bags.
+- **Real:** C-Chain contracts, Core wallet first (EIP-6963), a mainnet deploy script with its cost read from mainnet (not deployed).
+- **Probed, not claimed:** ICM. One Teleporter message from Fuji reached Echo through the public relayer, but no ICM/ICTT feature ships.
+
+---
+
+## 9. Built properly.
+
+- 70 Forge tests: auction, curve, floor, dare, factory, attacks and a solvency invariant.
+- 26 eERC checks on Anvil with real proofs and the production verifiers: replayed, tampered, wrong-sender and wrong-chain proofs all refused.
 - Every call is simulated against Fuji before the wallet opens.
 
 ---
 
-## 9. What's next
+## 10. What's next
 
-- Mainnet C-Chain deployment and Core mobile.
-- Graduation into a DEX pool next to the floor.
-- Try it: the hosted app link · repo · Snowtrace factory link.
+- Mainnet C-Chain (the script and runbook are ready, and the auditor is a product decision), and Core mobile.
+- Graduated coins on other Avalanche L1s through ICTT.
+- Try it: the hosted app link · repo · Snowtrace links.
 
 > Notes: end on the live app, not a slide.
