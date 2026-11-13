@@ -9,7 +9,9 @@ import { DEPLOYMENT } from '../../web/lib/deployment.ts';
 export const FACTORY = DEPLOYMENT.factory as Address;
 const VAULT = (DEPLOYMENT.eerc?.encryptedERC ?? null) as Address | null;
 const NAMES = new Map(Object.entries(DEPLOYMENT.names as Record<string, string>).map(([a, n]) => [a.toLowerCase(), n]));
-export const nameOf = (a: string) => NAMES.get(a.toLowerCase()) ?? `${a.slice(0, 6)}…${a.slice(-4)}`;
+// Demo accounts are people: their names are capitalised wherever the agent sees them ("Mira", not "mira").
+const person = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
+export const nameOf = (a: string) => { const n = NAMES.get(a.toLowerCase()); return n ? person(n) : `${a.slice(0, 6)}…${a.slice(-4)}`; };
 const avax = (wei: string | bigint) => `${Number(formatEther(BigInt(wei))).toLocaleString('en-US', { maximumSignificantDigits: 6 })} AVAX`;
 
 export type Ctx = { pub: PublicClient; coin: Address | null };
