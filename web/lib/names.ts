@@ -6,9 +6,11 @@ import { DEPLOYMENT } from "./deployment";
  *
  * An Avalanche address has no name of its own. The three accounts that seeded
  * the Fuji demo (listed in deployments/fuji.json) show the names the seed gave
- * them; every other account shows its short address, 0x1234…cdef.
+ * them, capitalised as people's names are ("Mira", not "mira"; "QA" for the test signer); every other account shows
+ * its short address, 0x1234…cdef. The vault's label ("private bags (eERC)") is not a person and stays as written.
  */
-const LABELS = new Map<string, string>(Object.entries(DEPLOYMENT.names as Record<string, string>).map(([address, name]) => [address.toLowerCase(), name] as [string, string]));
+const person = (name: string) => (name === "qa" ? "QA" : name.includes(" ") ? name : name.charAt(0).toUpperCase() + name.slice(1));
+const LABELS = new Map<string, string>(Object.entries(DEPLOYMENT.names as Record<string, string>).map(([address, name]) => [address.toLowerCase(), person(name)] as [string, string]));
 
 export function rememberName(_wallet: string, _name: string) {}
 
