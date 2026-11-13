@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import styled from "styled-components/native";
 
 import { BottomSheet } from "./BottomSheet";
@@ -29,10 +30,22 @@ export function ApproveSheet({ request: live, onAnswer }: { request: ApprovalReq
   // The last request stays rendered while the sheet slides away: emptying it mid-close changed the sheet's height,
   // which interrupted the closing animation and left the backdrop on screen.
   const [request, setShown] = useState<ApprovalRequest | null>(live);
+  // In its own Modal so it sits above any sheet that asked for it (the trade sheet hid it before); the Modal stays up
+  // until the sheet has slid away.
+  const [layer, setLayer] = useState(!!live);
   useEffect(() => {
-    if (live) setShown(live);
+    if (live) {
+      setShown(live);
+      setLayer(true);
+      return;
+    }
+    const timer = setTimeout(() => setLayer(false), 450);
+    return () => clearTimeout(timer);
   }, [live]);
+  if (!layer) return null;
   return (
+    <Modal transparent visible animationType="none" statusBarTranslucent onRequestClose={() => onAnswer(false)}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
     <BottomSheet visible={!!live} onClose={() => onAnswer(false)}>
       {request ? (
         <Body_>
@@ -67,6 +80,8 @@ export function ApproveSheet({ request: live, onAnswer }: { request: ApprovalReq
         </Body_>
       ) : null}
     </BottomSheet>
+      </GestureHandlerRootView>
+    </Modal>
   );
 }
 
