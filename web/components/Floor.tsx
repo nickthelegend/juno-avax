@@ -534,11 +534,11 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
           </>
         )
       ) : n.phase === "reveal" ? (
-        <Button label={mine ? "Reveal my bid" : mineOnChain?.exists ? "Your bid's secret is in another browser" : "No bid from this account"} variant="ink" tall disabled={!mine || mineOnChain?.revealed === true} onPress={() => void reveal()} loading={busy} />
+        <Button label={mine ? "Reveal my bid" : mineOnChain?.exists ? "Your bid's secret is in another browser" : "No bid from this account"} variant="ink" tall disabled={!mine || mineOnChain?.revealed === true || done === "Reveal"} onPress={() => void reveal()} loading={busy} />
       ) : (
         <Button label={done === "Settle" ? "Settled · opening the curve…" : "Settle the auction"} variant="lime" tall disabled={done === "Settle"} onPress={() => void settle()} loading={busy} />
       )}
-      {mineOnChain?.revealed && n.phase === "reveal" ? <Text style={f.mine}>Revealed. Settlement opens when the clock runs out.</Text> : null}
+      {(mineOnChain?.revealed || done === "Reveal") && n.phase === "reveal" ? <Text style={f.mine}>Revealed. Settlement opens when the clock runs out.</Text> : null}
       {error ? <Text style={f.error}>{error}</Text> : null}
       {hash ? <TxLink hash={hash.hash} ms={hash.ms} /> : null}
     </View>
