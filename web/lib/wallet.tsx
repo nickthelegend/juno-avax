@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { decodeErrorResult, encodeFunctionData, type Abi, type Address, type Hex } from "viem";
+import { decodeErrorResult, encodeFunctionData, formatEther, type Abi, type Address, type Hex } from "viem";
 import { client as sdkClient, factoryAbi, FUJI_RPC, mediaAbi, postAbi } from "@juno/sdk";
 import { encryptedErcAbi, registrarAbi } from "@juno/sdk/eerc";
 
@@ -22,8 +22,12 @@ import {
 import { canGetGas, getGas } from "./gas";
 import { describeTxError, EXPLORER_NAME, FACTORY, TxError } from "./chain";
 import { recordConfirmation } from "./finality";
+import { money } from "./format";
 import { confirmTx } from "./tx-status";
 import { SignInSheet } from "../components/SignInSheet";
+import { ApproveSheet, type ApprovalRequest } from "../components/ApproveSheet";
+import { DEPLOYMENT } from "./deployment";
+import { GAS_STATION } from "@juno/sdk";
 
 /**
  * The wallet: Juno on Avalanche, signed by the person's own browser wallet
@@ -134,6 +138,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [local, setLocal] = useState(false);
   const [gas, setGas] = useState<GasState>({ phase: "idle" });
   const pending = useRef<{ resolve: (address: string) => void; reject: (error: Error) => void } | null>(null);
+  // The Juno wallet asks before it signs anything (Core and MetaMask show their own window instead).
+  const [approval, setApproval] = useState<ApprovalRequest | null>(null);
+  const answer = useRef<((approved: boolean) => void) | null>(null);
+  const approve = useCallback(
+    (request: ApprovalRequest) =>
+      new Promise<void>((resolve, reject) => {
+        answer.current = (approved) => {
+          answer.current = null;
+          setApproval(null);
+          if (approved) resolve();
+          else reject(new TxError({ message: "", cancelled: true, reason: null }));
+        };
+        setApproval(request);
+      }),
+    [],
+  );
   /**
    * The connected account, readable by a `send` that was created before the
    * connect finished. A screen that calls `connect()` and then `send()` holds
@@ -183,7 +203,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const askGas = useCallback(async (account: string) => {
     setGas({ phase: "asking" });
     try {
-      const r = await getGas(account as Address, (raw) => signRawWithWallet(account as Address, raw));
+      const r = await getGas(account as Address, async (raw) => {
+        if (isLocalWallet())
+          await approve({
+            kind: "sign",
+            title: "Ask for free test AVAX",
+            account,
+            rows: [
+              { label: "From", value: `Juno gas station ${shortHex(GAS_STATION)}` },
+              { label: "Amount", value: "0.008 test AVAX, once per wallet" },
+              { label: "You pay", value: "Nothing: Juno's relayer sends it" },
+            ],
+          });
+        return signRawWithWallet(account as Address, raw);
+      });
       setGas({ phase: "done", hash: r.hash, amount: r.amount });
       invalidateMarkets();
       feedChanged();
@@ -278,6 +311,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             throw new TxError(failure);
           }
           progress({ index, label: step.label, phase: "signing" });
+          if (isLocalWallet()) await approve(await txRequest(address, step, value, data, data.length > 64_000 ? bigClient() : client));
           const hash = await sendWithWallet({ from: address as Address, to: step.to, data, value }).catch((error: unknown) => {
             throw new TxError(describeTxError(error));
           });
@@ -313,6 +347,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const signMessage = useCallback<WalletState["signMessage"]>(async (message) => {
     const account = current.current;
     if (!account) throw new TxError({ message: "Connect a wallet to continue.", cancelled: false, reason: null });
+    if (isLocalWallet())
+      await approve({ kind: "sign", title: "Sign this message", account, rows: [{ label: "Message", value: message.length > 160 ? `${message.slice(0, 157)}…` : message }, { label: "Cost", value: "Nothing: a signature is not a transaction" }] });
     return signWithWallet(account as Address, message).catch((error: unknown) => {
       throw new TxError(describeTxError(error));
     });
@@ -327,6 +363,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     <WalletContext.Provider value={value}>
       {children}
       <SignInSheet visible={signingIn} onClose={cancelSignIn} bridge={bridge} />
+      <ApproveSheet request={approval} onAnswer={(approved) => answer.current?.(approved)} />
     </WalletContext.Provider>
   );
 }
@@ -335,4 +372,30 @@ export function useWallet(): WalletState {
   const context = useContext(WalletContext);
   if (!context) throw new Error("useWallet must be used inside a WalletProvider");
   return context;
+}
+
+const shortHex = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+/** Contracts the app talks to, named for the approval sheet. */
+function contractName(to: string): string {
+  const t = to.toLowerCase();
+  if (FACTORY && t === FACTORY.toLowerCase()) return "Juno factory";
+  if (DEPLOYMENT.media && t === String(DEPLOYMENT.media).toLowerCase()) return "JunoMedia";
+  if (DEPLOYMENT.eerc && t === DEPLOYMENT.eerc.encryptedERC.toLowerCase()) return "eERC vault";
+  if (DEPLOYMENT.eerc && t === DEPLOYMENT.eerc.registrar.toLowerCase()) return "eERC registrar";
+  return "Post contract";
+}
+/** What the approval sheet shows for one transaction: the call, its contract, the AVAX it sends. */
+async function txRequest(account: string, step: TxStep, value: bigint, data: Hex, reader: ReturnType<typeof fujiClient>): Promise<ApprovalRequest> {
+  const rows = [
+    { label: "Calls", value: `${step.functionName}() on ${contractName(step.to)} ${shortHex(step.to)}` },
+    { label: "Sends", value: value > 0n ? `${Number(formatEther(value)).toLocaleString("en-US", { maximumSignificantDigits: 6 })} AVAX` : "0 AVAX" },
+  ];
+  const bytes = (data.length - 2) / 2;
+  if (bytes > 4096) rows.push({ label: "Data", value: `${Math.round(bytes / 1000)} kB, stored in this transaction` });
+  // The fee estimate is Fuji's own: estimated gas at the current gas price.
+  const fee = await Promise.all([reader.estimateGas({ account: account as Address, to: step.to, data, value }), reader.getGasPrice()])
+    .then(([gas, price]) => money(Number(formatEther(gas * price)), "AVAX"))
+    .catch(() => "set by Fuji when sent");
+  rows.push({ label: "Network fee", value: fee.endsWith("AVAX") ? `about ${fee}` : fee });
+  return { kind: "tx", title: step.label, account, rows };
 }
