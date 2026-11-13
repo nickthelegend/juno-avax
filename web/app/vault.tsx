@@ -567,7 +567,7 @@ function AuditorView({ data }: { data: VaultSnapshot }) {
           <Identicon seed={data.auditor} size={30} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Label style={{ fontWeight: "700" }}>
-              Auditor · <Handle wallet={data.auditor} />
+              Auditor account · {data.auditor.slice(0, 6)}…{data.auditor.slice(-4)}
             </Label>
             <Caption numberOfLines={1}>{data.auditor}</Caption>
           </View>
