@@ -180,18 +180,16 @@ function GetApp({ go }: { go: (path: string) => (e: React.MouseEvent) => void })
               <span className="jl-chip jl-skel" />
             )}
           </article>
-          <article>
-            <h3>Expo Go</h3>
-            <p className="jl-get-meta">Scan with your phone&apos;s camera</p>
-            {expo && qr ? (
+          {expo && qr ? (
+            <article>
+              <h3>Expo Go</h3>
+              <p className="jl-get-meta">Scan with your phone&apos;s camera</p>
               <div className="jl-qr">
                 <img src={qr} width={148} height={148} alt="QR code that opens Juno in Expo Go" />
                 <a href={expo}>{expo.replace(/^exp:\/\//, "")}</a>
               </div>
-            ) : (
-              <p className="jl-setup"><b>Setup required</b><span>The Expo Go link appears here once Juno is published.</span></p>
-            )}
-          </article>
+            </article>
+          ) : null}
           <article>
             <h3>In your browser</h3>
             <p className="jl-get-meta">Nothing to install</p>
