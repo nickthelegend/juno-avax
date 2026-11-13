@@ -405,7 +405,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
   };
 
   const refundButton =
-    mineOnChain?.exists && mineOnChain.refund > 0 && (n.phase === "curve" || n.phase === "graduated") ? (
+    mineOnChain?.exists && mineOnChain.refund > 0 && done !== "Refund" && (n.phase === "curve" || n.phase === "graduated") ? (
       <Button
         label={`Claim ${money(mineOnChain.refund, "AVAX", { compact: false })} refund`}
         variant="ink"
