@@ -3,9 +3,9 @@
  * sends like any wallet (each call is a normal Fuji transaction from its own account); Juno's server never sees the
  * key. It is created once and reopened on later visits; signing out does not delete it.
  */
-import { createWalletClient, getAddress, type Address, type Hex } from "viem";
+import { createWalletClient, getAddress, http, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
-import { fuji, fujiTransport } from "@juno/sdk";
+import { FUJI_RPC, fuji, fujiTransport } from "@juno/sdk";
 
 import { readKey, writeKey } from "./key-store";
 import { RPC_URLS } from "./chain";
@@ -43,7 +43,11 @@ function signer(): PrivateKeyAccount {
 export async function sendLocal(tx: { from: Address; to: Address; data: Hex; value: bigint }): Promise<Hex> {
   const me = signer();
   if (tx.from.toLowerCase() !== me.address.toLowerCase()) throw new Error("The Juno wallet is a different account.");
-  const wallet = createWalletClient({ account: me, chain: fuji, transport: fujiTransport(RPC_URLS) });
+  // A big transaction (a photo stored on Fuji, ~100 kB of calldata) goes only to the official endpoint: publicnode
+  // refuses request bodies that large with "Missing or invalid parameters", and the fallback would land there.
+  const big = tx.data.length > 64_000;
+  const transport = big ? http(FUJI_RPC, { timeout: 30_000, retryCount: 3, retryDelay: 800 }) : fujiTransport(RPC_URLS);
+  const wallet = createWalletClient({ account: me, chain: fuji, transport });
   const request = await wallet.prepareTransactionRequest({ to: tx.to, data: tx.data, value: tx.value });
   return wallet.sendRawTransaction({ serializedTransaction: await wallet.signTransaction(request) });
 }

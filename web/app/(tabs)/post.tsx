@@ -305,7 +305,7 @@ export default function PostScreen() {
           {!busy && missing ? <Text style={styles.missing}>{missing}</Text> : null}
           {busy && status ? <Text style={styles.missing}>{status}</Text> : null}
           <Text style={styles.footnote}>
-            One approval in your wallet. Your account pays the gas{kind === "dare" ? " and the bond" : ""}; the post&apos;s contract holds every bid, buy and floor from then on.
+            {photo ? "Two transactions: your photo goes on Fuji, then the launch." : "One approval in your wallet."} Your account pays the gas{kind === "dare" ? " and the bond" : ""}; the post&apos;s contract holds every bid, buy and floor from then on.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { decodeErrorResult, encodeFunctionData, type Abi, type Address, type Hex } from "viem";
-import { factoryAbi, mediaAbi, postAbi } from "@juno/sdk";
+import { client as sdkClient, factoryAbi, FUJI_RPC, mediaAbi, postAbi } from "@juno/sdk";
 import { encryptedErcAbi, registrarAbi } from "@juno/sdk/eerc";
 
 import { fujiClient, type TxStep } from "./api";
@@ -88,6 +88,9 @@ export type WalletState = {
 };
 
 const WalletContext = createContext<WalletState | null>(null);
+let big: ReturnType<typeof sdkClient> | null = null;
+/** A Fuji client on the official endpoint only, for calls with very large calldata. */
+const bigClient = () => (big ??= sdkClient([FUJI_RPC]));
 /** Refusals that only mean "not yet" and pass once the next block is stamped. */
 const TIME_WINDOWS = new Set(["RevealWindow", "SettleWindow", "DareWindow"]);
 
@@ -251,11 +254,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           progress({ index, label: step.label, phase: "checking" });
           const value = step.resolveValue ? await step.resolveValue() : BigInt(step.value);
           const data = encodeStep(step);
+          // publicnode refuses ~100 kB request bodies (a photo store), so those are checked on the official endpoint only.
+          const checker = data.length > 64_000 ? bigClient() : client;
           // Ask Fuji first: a call the contract would refuse fails here, with its reason, before the wallet opens.
           // A time-window refusal right at a boundary is retried for a few seconds: the simulation runs
           // against the latest block, whose timestamp trails this device's clock by up to a block.
           for (let attempt = 0; ; attempt += 1) {
-            const failure = await client
+            const failure = await checker
               .call({ account: address as Address, to: step.to, data, value })
               .then(() => null)
               .catch((error: unknown) => namedRefusal(error, ABIS[step.abi]));
