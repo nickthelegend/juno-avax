@@ -56,7 +56,7 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 - Repo: (GitHub link — Nick to push)
 - Live app: https://juno-avax.vercel.app (Fuji testnet)
 - iOS Simulator app: https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip (SHA-256 `f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913`; `xcrun simctl install booted Juno.app`)
-- Demo video (≤ 3 min): (to record)
+- Demo video (2:59.6): (upload link — Nick to add). Local file: `grokbot/videos/juno-avax/juno-avax-film.mp4` (1080p) and `juno-avax-film-share.mp4` (720p, 9.1 MB). Recorded live on Fuji: the standalone iOS Simulator build from the landing (wallet + gas, post, sealed-bid opening, settle, Ask Juno AI, buy/sell, redeem, each checked on Snowtrace) and the web app's Hide your bag (eERC shield, private send, auditor).
 - Slides: `docs/SLIDES.md`
 - Juno API health (gas station balance, AI configured): https://juno-avax-api.vercel.app/api/health
 - JunoGasStation (source verified): https://testnet.snowtrace.io/address/0x45fdcdf64f6fa312b02b98ad248461c6a02e722a
