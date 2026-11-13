@@ -3521,7 +3521,7 @@
       "result": "complete"
     },
     "local-1440-first": {
-      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125\u2026, approve 0x46a2fade\u2026).",
+      "note": "Local build of the production export (http://127.0.0.1:5391), fresh browser profile: drip and 10 txs succeeded; the shield deposit was refused in simulation by a public RPC node that had not seen the approval yet (fixed in cc9a2a5 by retrying). Probe: the same deposit simulates fine on both RPCs (QA account buy 0x35a77125…, approve 0x46a2fade…).",
       "url": "http://127.0.0.1:5391",
       "width": 1440,
       "slug": "judge-11121449",
@@ -3660,7 +3660,7 @@
     "at": "2026-11-12T15:09:32.072Z"
   },
   "standaloneIosRun": {
-    "note": "Standalone Juno.app (Release, iphonesimulator arm64, ad-hoc signed; web/public/download/Juno-iOS-Simulator.zip, first build sha256 c2caf75e\u2026cb3e; the hosted zip is the rebuild with the shorter profile copy and a light launch status bar, sha256 f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913) installed from the zip with xcrun simctl on an iPhone 17 Pro simulator, not Expo Go. A new Juno wallet in the app's own keychain got its drip in one tap, then bought 10 SPROUT on the curve from the coin page.",
+    "note": "Standalone Juno.app (Release, iphonesimulator arm64, ad-hoc signed; web/public/download/Juno-iOS-Simulator.zip, first build sha256 c2caf75e…cb3e; the hosted zip is the rebuild with the shorter profile copy and a light launch status bar, sha256 f6497df4ce4632a538c70f6f63a86ef56eda5b975487796ebd8bb8fd979cc913) installed from the zip with xcrun simctl on an iPhone 17 Pro simulator, not Expo Go. A new Juno wallet in the app's own keychain got its drip in one tap, then bought 10 SPROUT on the curve from the coin page.",
     "date": "2026-11-12",
     "account": "0x46415ba70888cbfed36c1ed8a2aba12eecf10195",
     "steps": [
@@ -3680,5 +3680,13 @@
       }
     ],
     "screenshots": "orchestration/shots/avax-juno/ship/ios/"
+  },
+  "media": {
+    "address": "0x5301266e52e90cb91f16adb49572adf74217d251",
+    "deployTx": "0x961e42bcca1b9992116a1d558728824b79ac8d9b641f10837d31bd564ff70ef6",
+    "block": 61024058,
+    "confirmMs": 1853,
+    "maxBytes": 120000,
+    "at": "2026-11-13T21:17:04.265Z"
   }
 }
