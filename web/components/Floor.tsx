@@ -269,7 +269,7 @@ function FinalityStrip() {
       </Text>
       {last ? (
         <Text style={s.finalityMine} numberOfLines={1}>
-          Your {last.label.toLowerCase()}: final in {seconds(last.blockMs ?? last.ms)}
+          Your last step, {last.label}: final in {seconds(last.blockMs ?? last.ms)}
         </Text>
       ) : null}
     </View>
