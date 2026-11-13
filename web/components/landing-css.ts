@@ -169,6 +169,45 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* phone */
 .jl-sec#how { padding-bottom: 136px; }
+.jl-sec#how { padding-bottom: 0; }
+.jl-sec#why { padding-bottom: 136px; }
+.jl-why { display: grid; border-radius: 28px; background: var(--surface); box-shadow: 0 1px 0 rgba(42,51,38,.04), 0 18px 40px -26px rgba(42,51,38,.35); overflow: hidden; }
+.jl-why-row { display: grid; grid-template-columns: minmax(0, .8fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr); border-top: 1px solid var(--line); }
+.jl-why-row.jl-why-top { border-top: 0; }
+.jl-why-row > span { padding: 22px 22px; font-size: 15.5px; line-height: 1.42; }
+.jl-why-q { font-weight: 800; font-size: 19px !important; letter-spacing: -.02em; color: var(--text); line-height: 1.2 !important; }
+.jl-why-them { color: var(--muted); border-left: 1px solid var(--line); }
+.jl-why-top .jl-why-them, .jl-why-top .jl-why-juno { display: grid; gap: 2px; align-content: end; }
+.jl-why-top b { font-weight: 800; font-size: 17px; letter-spacing: -.02em; color: var(--text); line-height: 1.2; }
+.jl-why-top small { font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; color: var(--faint); }
+.jl-why-juno { background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.jl-why-juno-head b { display: inline-flex; align-items: center; gap: 8px; color: var(--lime) !important; font-size: 22px !important; }
+.jl-why-juno-head small { color: var(--on-ink-mute) !important; }
+.jl-why-row:not(.jl-why-top) .jl-why-juno { border-top: 1px solid var(--ink-line); }
+.jl-why-src { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--alt); color: var(--text); font-family: var(--mono); font-size: 11px; font-weight: 700; text-decoration: none; vertical-align: 2px; }
+.jl-why-src:hover { background: var(--lime); }
+.jl-why-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 32px; margin-top: 28px; }
+.jl-why-notes li { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; color: var(--muted); }
+.jl-why-notes li > span { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text); }
+.jl-why-notes a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.jl-why-notes a:hover { color: var(--text); }
+.jl-why-honest { grid-column: 1 / -1; font-style: italic; }
+@media (max-width: 1080px) {
+  .jl-why-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .jl-why-q { grid-column: 1 / -1; padding-bottom: 6px !important; }
+  .jl-why-juno { grid-column: 1 / -1; }
+  .jl-why-top .jl-why-q { display: none; }
+  .jl-why-row > .jl-why-them:nth-child(2) { border-left: 0; }
+}
+@media (max-width: 640px) {
+  .jl-why-top { display: none !important; }
+  .jl-why-row { grid-template-columns: minmax(0, 1fr); }
+  .jl-why-row > span { padding: 14px 18px; }
+  .jl-why-them { border-left: 0; border-top: 1px dashed var(--line); }
+  .jl-why-them::before, .jl-why-juno::before { content: attr(data-who); display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 4px; }
+  .jl-why-juno::before { color: var(--lime); }
+  .jl-why-notes { grid-template-columns: minmax(0, 1fr); }
+}
 .jl-phone-sec { padding: 104px 0 120px; background: var(--ink); color: var(--on-ink); position: relative; }
 .jl-phone-sec::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 14px; background: var(--sage); clip-path: ${TEAR_EDGE}; rotate: 180deg; }
 .jl-phone-sec::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 14px; background: var(--sage); clip-path: ${TEAR_EDGE}; scale: -1 1; }
@@ -287,7 +326,8 @@ a.jl-acct:hover { text-decoration: underline; text-underline-offset: 3px; }
   .jl-sec { padding-top: 96px; }
   .jl-head { margin-bottom: 32px; }
   .jl-beat-art { height: 200px; }
-  .jl-sec#how { padding-bottom: 104px; }
+  .jl-sec#how { padding-bottom: 0; }
+  .jl-sec#why { padding-bottom: 104px; }
   .jl-phone-sec { padding: 80px 0 88px; }
   .jl-phone-copy > p:not(.jl-lbl) { font-size: 16px; }
   .jl-points li { grid-template-columns: 1fr; gap: 2px; }

@@ -251,6 +251,7 @@ export default function Landing() {
         <a href="/" className="jl-brand" aria-label="Juno home"><Mark size={26} /><span>juno</span></a>
         <nav aria-label="Primary">
           <a href="#how" onClick={jump("how")} className="jl-link">How it works</a>
+          <a href="#why" onClick={jump("why")} className="jl-link">Why Juno</a>
           <a href="#get-app" onClick={jump("get-app")} className="jl-link">Get the app</a>
           <a href="/social" onClick={go("/(tabs)/social")} className="jl-pill jl-pill-white">Open app</a>
         </nav>
@@ -356,6 +357,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Why />
+
         <section className="jl-phone-sec" aria-labelledby="jl-phone-title">
           <div className="jl-wrap jl-phone-grid">
             <div className="jl-phone-copy">
@@ -440,5 +443,102 @@ export default function Landing() {
         <p className="jl-word" aria-hidden="true">juno</p>
       </footer>
     </div>
+  );
+}
+
+/**
+ * Why Juno: the launch models people already use, side by side, each claim with its public source.
+ * Only what the sources say; Juno's column is what its contracts on Fuji do (a testnet, said in the footnote).
+ */
+const RIVALS = [
+  { id: "pump", name: "Bonding-curve launchpads", eg: "pump.fun and its copies" },
+  { id: "zora", name: "Posts and creators as coins", eg: "Zora, Base creator coins" },
+  { id: "keys", name: "Social keys", eg: "Friend.tech" },
+] as const;
+
+type Cell = { text: string; src?: number };
+const WHY_ROWS: { q: string; them: [Cell, Cell, Cell]; juno: string }[] = [
+  {
+    q: "Who gets the best price?",
+    them: [
+      { text: "The first buyer. The curve starts cheapest and rises with every buy." },
+      { text: "The first swap. The coin's trading pool opens the moment it launches.", src: 3 },
+      { text: "The first buyer. A key costs supply² ÷ 16,000 ETH, so the first is almost free.", src: 4 },
+    ],
+    juno: "Nobody. Bids are sealed for one minute, then every winner pays one clearing price.",
+  },
+  {
+    q: "What do bots do at launch?",
+    them: [
+      { text: "Over half of pump.fun tokens were sniped in the block they were created (April 2025).", src: 1 },
+      { text: "Two bots made about $1.3M in the first block of Base founder Jesse Pollak's creator coin (Nov 2025).", src: 5 },
+      { text: "No sealed phase: whichever transaction lands first buys the first, cheapest key." },
+    ],
+    juno: "Nothing useful. A bid is a hash plus the same 0.005 AVAX deposit from everyone, so being first buys no better price.",
+  },
+  {
+    q: "When the hype ends?",
+    them: [
+      { text: "98.6% of 7M+ pump.fun tokens didn't keep $1,000 of liquidity (Solidus Labs, May 2025).", src: 2 },
+      { text: "You sell into the pool at whatever it pays. There is no floor." },
+      { text: "You sell back down the curve: every sale lowers the price for the next seller.", src: 4 },
+    ],
+    juno: "A floor vault. Half the auction money and a fifth of every buy stay in the post. Any holder burns coins for their share, at any time.",
+  },
+  {
+    q: "Who can see your bag?",
+    them: [
+      { text: "Everyone. Balances are public token balances." },
+      { text: "Everyone. Balances are public token balances." },
+      { text: "Everyone. Key holdings are public on Base." },
+    ],
+    juno: "Hide it in Ava Labs' eERC vault: a private transfer shows no amount, readable only by the two holders and the auditor. Shields stay public.",
+  },
+];
+const WHY_SOURCES = [
+  { n: 1, label: "Pine Analytics, Exit Liquidity Machines (Apr 21, 2025)", href: "https://pineanalytics.substack.com/p/exit-liquidity-machines" },
+  { n: 2, label: "Solidus Labs, 2025 Rug Pull Report (May 2025)", href: "https://www.soliduslabs.com/reports/solana-rug-pulls-pump-dumps-crypto-compliance" },
+  { n: 3, label: "Zora docs, coin contracts (Uniswap v4 pool at launch)", href: "https://docs.zora.co/coins/contracts/coin" },
+  { n: 4, label: "friend.tech's curve, supply² ÷ 16,000 (Blockcrunch)", href: "https://blockcrunch.substack.com/p/friendtech-under-the-hood" },
+  { n: 5, label: "FXStreet on Arkham data, JESSE's debut (Nov 21, 2025)", href: "https://www.fxstreet.com/cryptocurrencies/news/snipers-made-13m-on-jesse-pollaks-creator-coin-debut-on-base-202511211148" },
+];
+
+function Why() {
+  return (
+    <section className="jl-sec" id="why" aria-labelledby="jl-why-title">
+      <div className="jl-wrap">
+        <header className="jl-head">
+          <p className="jl-lbl">Why Juno</p>
+          <h2 id="jl-why-title">Other launches pay the fastest bot.</h2>
+        </header>
+        <div className="jl-why" role="table" aria-label="Juno next to other launch models">
+          <div className="jl-why-row jl-why-top" role="row">
+            <span role="columnheader" className="jl-why-q" />
+            {RIVALS.map((r) => (
+              <span role="columnheader" key={r.id} className="jl-why-them"><b>{r.name}</b><small>{r.eg}</small></span>
+            ))}
+            <span role="columnheader" className="jl-why-juno jl-why-juno-head"><b><Mark size={20} /> Juno</b><small>on Avalanche</small></span>
+          </div>
+          {WHY_ROWS.map((row, i) => (
+            <div className="jl-why-row" role="row" key={row.q}>
+              <span role="rowheader" className="jl-why-q">{row.q}</span>
+              {row.them.map((cell, j) => (
+                <span role="cell" key={j} className="jl-why-them" data-who={RIVALS[j]!.name}>
+                  {cell.text}
+                  {cell.src ? <a className="jl-why-src" href={WHY_SOURCES[cell.src - 1]!.href} target="_blank" rel="noreferrer" aria-label={`Source ${cell.src}`}>{cell.src}</a> : null}
+                </span>
+              ))}
+              <span role="cell" className={`jl-why-juno ${i === WHY_ROWS.length - 1 ? "is-last" : ""}`} data-who="Juno">{row.juno}</span>
+            </div>
+          ))}
+        </div>
+        <ol className="jl-why-notes">
+          {WHY_SOURCES.map((s) => (
+            <li key={s.n}><span>{s.n}</span><a href={s.href} target="_blank" rel="noreferrer">{s.label}</a></li>
+          ))}
+          <li className="jl-why-honest">Juno runs on Fuji, Avalanche&apos;s testnet; the others are live markets with real users and real money.</li>
+        </ol>
+      </div>
+    </section>
   );
 }
