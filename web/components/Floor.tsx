@@ -372,6 +372,11 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
     };
   }, [wallet.address, coin.address, n.phase, n.sealedBids, n.revealedBids, hash]);
 
+  // The step this card just confirmed: its result stays on screen until the chain read catches up (no flash back).
+  const [done, setDone] = useState<string | null>(null);
+  useEffect(() => {
+    setDone(null);
+  }, [n.phase, mineOnChain?.exists]);
   const run = async (label: string, build: () => Promise<Parameters<typeof wallet.send>[0]>) => {
     setBusy(true);
     setError(null);
@@ -382,6 +387,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       const sent = await wallet.send(steps);
       const last = sent.hashes.length - 1;
       setHash({ hash: sent.hashes[last] ?? "", ms: sent.blockMs[last] ?? sent.finalityMs[last] ?? null });
+      setDone(label);
       onChanged();
     } catch (caught) {
       const failure = describeTxError(caught);
@@ -511,8 +517,8 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
           <Text style={f.mine}>
             Your sealed bid: {mine.amount} tokens at up to {amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. The salt stays on this device until you reveal.
           </Text>
-        ) : busy ? (
-          <Text style={f.mine}>Placing your sealed bid…</Text>
+        ) : busy || done === "Bid" ? (
+          <Text style={f.mine}>{busy ? "Placing your sealed bid…" : "Sealed bid placed. Reading it back from Fuji…"}</Text>
         ) : mineOnChain?.exists ? (
           <Text style={f.mine}>This account already has a sealed bid here, placed from another browser.</Text>
         ) : (
@@ -530,7 +536,7 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
       ) : n.phase === "reveal" ? (
         <Button label={mine ? "Reveal my bid" : mineOnChain?.exists ? "Your bid's secret is in another browser" : "No bid from this account"} variant="ink" tall disabled={!mine || mineOnChain?.revealed === true} onPress={() => void reveal()} loading={busy} />
       ) : (
-        <Button label="Settle the auction" variant="lime" tall onPress={() => void settle()} loading={busy} />
+        <Button label={done === "Settle" ? "Settled · opening the curve…" : "Settle the auction"} variant="lime" tall disabled={done === "Settle"} onPress={() => void settle()} loading={busy} />
       )}
       {mineOnChain?.revealed && n.phase === "reveal" ? <Text style={f.mine}>Revealed. Settlement opens when the clock runs out.</Text> : null}
       {error ? <Text style={f.error}>{error}</Text> : null}
