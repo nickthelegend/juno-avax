@@ -13,6 +13,7 @@ export const DEPLOYMENT = {
     "0xA98280DF5007bc9E78B1644327702eE9f55B6cb8": "auditor",
     "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac": "private bags (eERC)"
   },
+  "media": "0x5301266e52e90cb91f16adb49572adf74217d251",
   "eerc": {
     "encryptedERC": "0xb999d23aebb54a9f2b7e9b043e76501a4eb0aeac",
     "registrar": "0x949a55ddff2a85ce1a1bad7c760515903dee0c93",

@@ -13,6 +13,8 @@ const out = {
   // The seeded test accounts, so the feed can say "mira" instead of 0xB9F0…0037.
   names: d.accounts ? Object.fromEntries(Object.entries(d.accounts).filter(([name]) => ['mira', 'kai', 'oto', 'auditor', 'qa'].includes(name)).map(([name, address]) => [address, name])) : {},
   // The Juno eERC vault (Ava Labs EncryptedERC, converter mode), when deployed.
+  // JunoMedia: a post's photo is stored as the calldata of one store() call on Fuji (v2.3).
+  media: d.media?.address ?? null,
   eerc: d.eerc?.vault ? { encryptedERC: d.eerc.vault.encryptedERC, registrar: d.eerc.vault.registrar, auditor: d.eerc.auditor, startBlock: d.eerc.startBlock, source: d.eerc.source } : null,
 };
 // The vault holds every shielded coin; holder lists name it instead of showing its address.
