@@ -351,8 +351,8 @@ function MediaPicker({
       <View style={[styles.drop, { paddingVertical: 18 }]}>
         <Text style={styles.dropTitle}>Your photo</Text>
         <View style={styles.photoRow}>
-          <Button label={picking === "library" ? "Opening…" : "Choose a photo"} onPress={() => void choose("library")} loading={picking === "library"} disabled={disabled || !!picking} style={styles.photoButton} />
-          <Button label={picking === "camera" ? "Opening…" : "Take a photo"} variant="ink" onPress={() => void choose("camera")} loading={picking === "camera"} disabled={disabled || !!picking} style={styles.photoButton} />
+          <Button label={picking === "library" ? "Opening…" : "Choose photo"} onPress={() => void choose("library")} loading={picking === "library"} disabled={disabled || !!picking} style={styles.photoButton} />
+          <Button label={picking === "camera" ? "Opening…" : "Take photo"} variant="ink" onPress={() => void choose("camera")} loading={picking === "camera"} disabled={disabled || !!picking} style={styles.photoButton} />
         </View>
         <Text style={styles.dropBlurb}>Stored on Fuji itself. No upload server.</Text>
         <View style={styles.orRule} />
