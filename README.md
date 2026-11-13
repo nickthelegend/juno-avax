@@ -51,6 +51,23 @@ cd api && pnpm test                         # Juno API on live Fuji (14, incl. o
 5. **Post** (the + tab): pick art, name it, launch. Then you have one minute to place a sealed bid, one to reveal, and anyone can settle. After each transaction the app shows how long Avalanche took to make it final.
 6. **Hide your bag**: on any coin page tap *Hide your bag* (or open `/vault`). *Public view* shows what anyone can read. *Your bag* asks for one signature (not a transaction), then registers your key with a proof built in the browser, and lets you shield, send privately and unshield. *Auditor* shows transfer amounts only to the auditor's wallet.
 
+## Why Juno, next to what people use today
+
+The landing's **Why Juno** section puts Juno beside the launch models people already use. Every claim about another platform has a public source; Juno's column is what its contracts on Fuji do. Juno is on a testnet; the others are live markets with real users.
+
+| | Bonding-curve launchpads (pump.fun and copies) | Posts and creators as coins (Zora, Base creator coins) | Social keys (Friend.tech) | Juno |
+| --- | --- | --- | --- | --- |
+| Who gets the best price | The first buyer: the curve starts cheapest | The first swap: a Uniswap v4 pool opens at launch [3] | The first buyer: a key costs supply² ÷ 16,000 ETH [4] | Nobody: one minute of sealed bids, one clearing price for every winner |
+| Bots at launch | Over half of pump.fun tokens were sniped in their creation block, April 2025 [1] | Two bots made about $1.3M in the first block of Base founder Jesse Pollak's creator coin, Nov 2025 [5] | No sealed phase: the first transaction buys the cheapest key | A bid is a hash plus the same 0.005 AVAX deposit from everyone |
+| When the hype ends | 98.6% of 7M+ pump.fun tokens did not keep $1,000 of liquidity [2] | Sell into the pool; no floor | Sell down the curve; each sale lowers the next seller's price [4] | A floor vault (half the auction raise + 20% of every buy), redeemable pro rata at any time |
+| Who sees your bag | Everyone | Everyone | Everyone | Hide it in Ava Labs' eERC: private transfers show no amount (the two holders and the auditor can read it); shields stay public |
+
+Sources: [1] [Pine Analytics, "Exit Liquidity Machines", Apr 21 2025](https://pineanalytics.substack.com/p/exit-liquidity-machines) · [2] [Solidus Labs, 2025 Rug Pull Report](https://www.soliduslabs.com/reports/solana-rug-pulls-pump-dumps-crypto-compliance) · [3] [Zora docs, coin contracts](https://docs.zora.co/coins/contracts/coin) · [4] [Blockcrunch, "friend.tech under the hood"](https://blockcrunch.substack.com/p/friendtech-under-the-hood) · [5] [FXStreet on Arkham data, Nov 21 2025](https://www.fxstreet.com/cryptocurrencies/news/snipers-made-13m-on-jesse-pollaks-creator-coin-debut-on-base-202511211148)
+
+## Post a real photo, stored on Fuji (v2.3)
+
+**Post a photo** offers *Choose a photo* and *Take a photo* (the camera needs a real device; the simulator has none). Juno has no upload server, so the app crops the photo square and shrinks it to a JPEG of at most 110 kB, then stores its bytes on Fuji as the calldata of one call to [`JunoMedia`](contracts/src/JunoMedia.sol) ([`0x5301266e…d251`](https://testnet.snowtrace.io/address/0x5301266e52e90cb91f16adb49572adf74217d251), source verified). The contract writes nothing to storage: it checks the bytes are a JPEG, PNG or WebP of at most 120 kB and emits `Stored(by, keccak256, size, kind)`. The post's `mediaUrl` is `https://juno-avax-api.vercel.app/api/media?tx=<hash>`: Juno's API reads that transaction back from Fuji, checks it called JunoMedia, succeeded and that the bytes hash to the event's value, and serves the image. Anyone can check the same with a public RPC. At Fuji's gas price a 100 kB photo costs about 1.7M gas, a tiny fraction of the starter AVAX. 5 Forge tests and 3 live API tests (one real store).
+
 ## Zero-setup start: JunoGasStation (v2.1)
 
 A judge with an empty wallet could not bid (a sealed bid escrows 0.005 AVAX) or even launch a post. Juno now pays a **starter balance** to brand-new wallets, with the rules kept on-chain where anyone can audit them:
