@@ -19,9 +19,11 @@ import { CurvePreview } from "../../components/CurvePreview";
 import { Button, Card, Pill } from "../../components/kit";
 import { APP_URL, juno } from "../../lib/api";
 import { describeTxError, explorer, FACTORY, NETWORK_NAME } from "../../lib/chain";
+import { API } from "../../lib/gas";
+import { pickPhoto, type Photo } from "../../lib/photo";
 import { feedChanged } from "../../lib/refresh";
 import { useTabBarHeight } from "../../lib/tabbar";
-import { useWallet } from "../../lib/wallet";
+import { useWallet, type SendProgress } from "../../lib/wallet";
 import { theme } from "../../theme";
 
 /**
@@ -36,8 +38,10 @@ import { theme } from "../../theme";
  * reveals, then its bonding curve.
  *
  * Media is a URL stored on-chain (300 characters at most). There is no Juno
- * upload server, so the picker offers Juno's own art (served by this app) or
- * any https image URL.
+ * upload server: a photo from the camera or the library is shrunk to a JPEG of
+ * at most 110 kB and stored on Fuji itself, as the calldata of one
+ * JunoMedia.store transaction (lib/photo.ts); the post's URL is Juno's API
+ * reading that transaction back. Juno's own art or any https image URL work too.
  */
 
 /** Juno's own art, served from this app's /art. Square, so it sits in the feed as a photo would. */
@@ -59,6 +63,7 @@ export default function PostScreen() {
   const router = useRouter();
   const wallet = useWallet();
   const [media, setMedia] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<Photo | null>(null);
   const [mediaUrl, setMediaUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [name, setName] = useState("");
@@ -86,12 +91,12 @@ export default function PostScreen() {
   const captionOk = captionBytes <= MAX_CAPTION;
   const bondNear = Number(bond);
   const dareOk = kind === "plain" || (dare.trim().length > 0 && new TextEncoder().encode(dare.trim()).length <= 300 && bondNear > 0 && bondNear <= 2);
-  const chosen = media ?? (/^https:\/\/\S{6,290}$/.test(mediaUrl.trim()) ? mediaUrl.trim() : null);
+  const chosen = photo ? photo.uri : (media ?? (/^https:\/\/\S{6,290}$/.test(mediaUrl.trim()) ? mediaUrl.trim() : null));
   const canLaunch = !!chosen && slugOk && captionOk && dareOk && !busy && !!FACTORY;
   const missing = !FACTORY
     ? "Setup required: EXPO_PUBLIC_JUNO_FACTORY"
     : !chosen
-      ? "Pick art or paste an https image URL"
+      ? "Choose a photo, pick art or paste an https image URL"
       : !slugOk
         ? "Name it: 2–32 lowercase letters, digits or dashes"
         : !captionOk
@@ -106,6 +111,7 @@ export default function PostScreen() {
     await new Promise((resolve) => setTimeout(resolve, 3500));
     setStatus(null);
     setMedia(null);
+    setPhoto(null);
     setMediaUrl("");
     setName("");
     setCaption("");
@@ -121,26 +127,33 @@ export default function PostScreen() {
     setLog([]);
     try {
       await (wallet.address ? Promise.resolve(wallet.address) : wallet.connect());
+      const onProgress = (at: SendProgress) =>
+        setStatus(
+          at.phase === "checking"
+            ? `${at.label}: checking with ${NETWORK_NAME}…`
+            : at.phase === "signing"
+              ? `${at.label}: approve it in ${wallet.walletName ?? "your wallet"}…`
+              : at.phase === "confirming"
+                ? `${at.label}: confirming on ${NETWORK_NAME}…`
+                : `${at.label}: final in ${(((at.blockMs ?? at.ms) ?? 0) / 1000).toFixed(2)} s`,
+        );
+      let mediaFor = chosen;
+      if (photo) {
+        // The photo goes on Fuji first; the post then points at that transaction.
+        const stored = await wallet.send(juno.buildStorePhoto(photo.hex).steps, { onProgress });
+        const storeHash = stored.hashes[0]!;
+        note({ label: `Photo stored on Fuji (${Math.round(photo.size / 1000)} kB) final in ${(((stored.blockMs[0] ?? stored.finalityMs[0]) ?? 0) / 1000).toFixed(2)} s`, receipt: storeHash, kind: "tx" });
+        mediaFor = `${API}/api/media?tx=${storeHash}`;
+      }
       setStatus("Building the launch…");
       const built = juno.buildLaunch({
         slug,
         caption: caption.trim(),
-        mediaUrl: chosen,
+        mediaUrl: mediaFor,
         dare: kind === "dare" ? dare.trim() : "",
         dareBondAvax: kind === "dare" ? bondNear : 0,
       });
-      const sent = await wallet.send(built.steps, {
-        onProgress: (at) =>
-          setStatus(
-            at.phase === "checking"
-              ? `${at.label}: checking with ${NETWORK_NAME}…`
-              : at.phase === "signing"
-                ? `${at.label}: approve it in ${wallet.walletName ?? "your wallet"}…`
-                : at.phase === "confirming"
-                  ? `${at.label}: confirming on ${NETWORK_NAME}…`
-                  : `${at.label}: final in ${(((at.blockMs ?? at.ms) ?? 0) / 1000).toFixed(2)} s`,
-          ),
-      });
+      const sent = await wallet.send(built.steps, { onProgress });
       const launchHash = sent.hashes[sent.hashes.length - 1]!;
       note({ label: `createPost final in ${(((sent.blockMs[0] ?? sent.finalityMs[0]) ?? 0) / 1000).toFixed(2)} s`, receipt: launchHash, kind: "tx" });
       const post = await juno.postFromLaunch(launchHash);
@@ -169,8 +182,21 @@ export default function PostScreen() {
             floor every holder can redeem.
           </Text>
 
-          <MediaPicker media={chosen} onPick={setMedia} disabled={busy} />
-          {media ? null : (
+          <MediaPicker
+            media={chosen}
+            photo={photo}
+            onPick={(path) => {
+              setMedia(path);
+              if (!path) setPhoto(null);
+            }}
+            onPhoto={(next) => {
+              setError(null);
+              setPhoto(next);
+            }}
+            onError={setError}
+            disabled={busy}
+          />
+          {media || photo ? null : (
             <TextInput
               value={mediaUrl}
               onChangeText={setMediaUrl}
@@ -289,15 +315,48 @@ export default function PostScreen() {
 
 const MAX_CAPTION = 400;
 
-/** Juno's art as a grid to pick from, then the pick previewed at its own shape. */
-function MediaPicker({ media, onPick, disabled }: { media: string | null; onPick: (path: string | null) => void; disabled: boolean }) {
+/** Your own photo (camera or library) first, Juno's art as a grid below it, then the pick previewed square. */
+function MediaPicker({
+  media,
+  photo,
+  onPick,
+  onPhoto,
+  onError,
+  disabled,
+}: {
+  media: string | null;
+  photo: Photo | null;
+  onPick: (path: string | null) => void;
+  onPhoto: (photo: Photo) => void;
+  onError: (message: string) => void;
+  disabled: boolean;
+}) {
   // Yoga on iOS (RN 0.88) gives a percentage-wide cell no height from aspectRatio, so the height is set from the
   // grid's measured width (the same 31% the web renders).
   const [cell, setCell] = useState<number | null>(null);
+  const [picking, setPicking] = useState<"library" | "camera" | null>(null);
+  const choose = async (from: "library" | "camera") => {
+    setPicking(from);
+    try {
+      const next = await pickPhoto(from);
+      if (next) onPhoto(next);
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setPicking(null);
+    }
+  };
   if (!media) {
     return (
       <View style={[styles.drop, { paddingVertical: 18 }]}>
-        <Text style={styles.dropTitle}>Pick the art</Text>
+        <Text style={styles.dropTitle}>Your photo</Text>
+        <View style={styles.photoRow}>
+          <Button label={picking === "library" ? "Opening…" : "Choose a photo"} onPress={() => void choose("library")} loading={picking === "library"} disabled={disabled || !!picking} style={styles.photoButton} />
+          <Button label={picking === "camera" ? "Opening…" : "Take a photo"} variant="ink" onPress={() => void choose("camera")} loading={picking === "camera"} disabled={disabled || !!picking} style={styles.photoButton} />
+        </View>
+        <Text style={styles.dropBlurb}>Stored on Fuji itself. No upload server.</Text>
+        <View style={styles.orRule} />
+        <Text style={styles.dropTitle}>Or pick Juno&apos;s art</Text>
         <View style={styles.grid} onLayout={(e) => setCell(Math.floor(0.31 * (e.nativeEvent.layout.width - 28)))}>
           {ART.map((path) => (
             <View key={path} style={[styles.cell, cell ? { height: cell } : null]}>
@@ -313,7 +372,12 @@ function MediaPicker({ media, onPick, disabled }: { media: string | null; onPick
   }
   return (
     <View style={[styles.preview, { aspectRatio: 1 }]}>
-      <ExpoImage source={{ uri: juno.media(media) ?? undefined }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <ExpoImage source={{ uri: photo ? photo.uri : (juno.media(media) ?? undefined) }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {photo ? (
+        <View style={styles.photoTag}>
+          <Text style={styles.changeText}>{`Your photo · ${Math.round(photo.size / 1000)} kB · goes on Fuji at launch`}</Text>
+        </View>
+      ) : null}
       <Pressable onPress={() => onPick(null)} disabled={disabled} style={styles.change} accessibilityRole="button">
         <Text style={styles.changeText}>Change</Text>
       </Pressable>
@@ -451,5 +515,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   changeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  photoRow: { flexDirection: "row", gap: 10, alignSelf: "stretch", paddingHorizontal: 14 },
+  photoButton: { flex: 1 },
+  orRule: { alignSelf: "stretch", height: 1, backgroundColor: theme.colors.line, marginHorizontal: 14, marginVertical: 6 },
+  photoTag: {
+    position: "absolute",
+    left: 12,
+    top: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
   footnote: { fontSize: theme.type.micro.size, fontWeight: "500", color: theme.colors.faint, lineHeight: 16, marginTop: 8 },
 });

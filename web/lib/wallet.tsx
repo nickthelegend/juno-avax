@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { decodeErrorResult, encodeFunctionData, type Abi, type Address, type Hex } from "viem";
-import { factoryAbi, postAbi } from "@juno/sdk";
+import { factoryAbi, mediaAbi, postAbi } from "@juno/sdk";
 import { encryptedErcAbi, registrarAbi } from "@juno/sdk/eerc";
 
 import { fujiClient, type TxStep } from "./api";
@@ -96,6 +96,7 @@ const ABIS: Record<TxStep["abi"], Abi> = {
   factory: factoryAbi as Abi,
   eerc: encryptedErcAbi as Abi,
   registrar: registrarAbi as Abi,
+  media: mediaAbi as Abi,
 };
 
 /** A simulation refused with a bare selector ("custom error 0x…"): name it from the step's ABI. */

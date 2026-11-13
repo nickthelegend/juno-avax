@@ -22,6 +22,7 @@ import { factoryAbi } from "@juno/sdk";
 import { Platform } from "react-native";
 
 import { explorer, FACTORY, RPC_URLS, sameAddress } from "./chain";
+import { DEPLOYMENT } from "./deployment";
 import { portfolioHistory, positionAccounting } from "./accounting";
 
 /**
@@ -283,7 +284,7 @@ export type DepthPoint = {
 export type TxStep = {
   label: string;
   to: Address;
-  abi: "post" | "factory" | "eerc" | "registrar";
+  abi: "post" | "factory" | "eerc" | "registrar" | "media";
   functionName: string;
   args: readonly unknown[];
   /** wei, decimal string. */
@@ -895,6 +896,13 @@ export const juno = {
         },
       ],
     };
+  },
+
+  /** Store a photo on Fuji: its bytes are the calldata of one JunoMedia.store call (see lib/photo.ts). */
+  buildStorePhoto: (hex: `0x${string}`): { steps: TxStep[] } => {
+    const media = DEPLOYMENT.media as Address | null;
+    if (!media) throw new ApiError("Setup required: JunoMedia is not deployed (deployments/fuji.json → media)", 503);
+    return { steps: [{ label: "Store photo", to: media, abi: "media", functionName: "store", args: [hex], value: "0" }] };
   },
 
   /** The post a launch transaction created, read from its PostCreated event. */
