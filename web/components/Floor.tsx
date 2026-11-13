@@ -43,6 +43,9 @@ const POLL_MS = 30_000;
 /* ------------------------------------------------------------------ */
 
 /** A floor: a bar under a stack. Means one thing: AVAX held for holders to redeem. */
+/** The last confirmed opening-auction step per post, for this app session. */
+const LAST_RECEIPT = new Map<string, { hash: string; ms: number | null }>();
+
 export function FloorGlyph({ size = 16, color = c.pos, filled = false }: { size?: number; color?: string; filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -336,7 +339,13 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
   const [maxPrice, setMaxPrice] = useState("0.00001");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hash, setHash] = useState<{ hash: string; ms: number | null } | null>(null);
+  // The last receipt survives the card re-mounting when the phase changes (the settle's receipt used to vanish as the
+  // page switched to the curve layout).
+  const [hash, setHashState] = useState<{ hash: string; ms: number | null } | null>(() => LAST_RECEIPT.get(coin.address) ?? null);
+  const setHash = (next: { hash: string; ms: number | null } | null) => {
+    if (next) LAST_RECEIPT.set(coin.address, next);
+    setHashState(next);
+  };
   const [mineOnChain, setMineOnChain] = useState<{ exists: boolean; revealed: boolean; refund: number; allocated: number } | null>(null);
   const pendingBidAccount = useRef<string | null>(null);
   // On a phone the bid's salt is kept in the keychain; read it back before showing the reveal.
