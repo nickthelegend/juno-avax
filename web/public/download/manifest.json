@@ -4,9 +4,9 @@
   },
   "ios": {
     "file": "Juno-iOS-Simulator.zip",
-    "bytes": 18421519,
-    "sha256": "8bf5f1eaef674877f68d5d8dad12ec21acead949f75904e104467f876c2497c1",
-    "version": "4.2.0",
+    "bytes": 18423241,
+    "sha256": "203980a46b714c7aaa8192e831fda7018d8ee09c20b044d22d534a4df96f68fa",
+    "version": "4.2.1",
     "built": "2026-11-13",
     "bundleId": "app.launch.junoavax",
     "build": "Release, iphonesimulator arm64 (Apple silicon Macs), ad-hoc signed"
