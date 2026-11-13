@@ -2,7 +2,7 @@
   "expo": {
     "name": "Juno",
     "slug": "juno-avax",
-    "version": "4.1.1",
+    "version": "4.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -22,7 +22,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "app.launch.junoavax",
-      "versionCode": 411
+      "versionCode": 412
     },
     "web": {
       "favicon": "./assets/favicon.png"
