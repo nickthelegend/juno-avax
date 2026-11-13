@@ -17,8 +17,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CurvePreview } from "../../components/CurvePreview";
 import { Button, Card, Pill } from "../../components/kit";
-import { APP_URL, juno } from "../../lib/api";
+import { APP_URL, fujiClient, juno } from "../../lib/api";
 import { describeTxError, explorer, FACTORY, NETWORK_NAME } from "../../lib/chain";
+import { factoryAbi } from "@juno/sdk";
+import { keccak256, toBytes, zeroAddress, type Address } from "viem";
 import { API } from "../../lib/gas";
 import { pickPhoto, type Photo } from "../../lib/photo";
 import { feedChanged } from "../../lib/refresh";
@@ -84,6 +86,8 @@ export default function PostScreen() {
   }, [log.length]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Names are unique on the factory: check before anything is sent (a photo stored for a taken name would be wasted).
+  const [taken, setTaken] = useState<string | null>(null);
 
   const slug = name.trim().toLowerCase();
   const slugOk = /^[a-z0-9-]{2,32}$/.test(slug) && !slug.startsWith("-") && !slug.endsWith("-");
@@ -92,13 +96,31 @@ export default function PostScreen() {
   const bondNear = Number(bond);
   const dareOk = kind === "plain" || (dare.trim().length > 0 && new TextEncoder().encode(dare.trim()).length <= 300 && bondNear > 0 && bondNear <= 2);
   const chosen = photo ? photo.uri : (media ?? (/^https:\/\/\S{6,290}$/.test(mediaUrl.trim()) ? mediaUrl.trim() : null));
-  const canLaunch = !!chosen && slugOk && captionOk && dareOk && !busy && !!FACTORY;
+  useEffect(() => {
+    if (!slugOk || !FACTORY) {
+      setTaken(null);
+      return;
+    }
+    let live = true;
+    const timer = setTimeout(() => {
+      nameTaken(slug)
+        .then((t) => live && setTaken(t ? slug : null))
+        .catch(() => undefined);
+    }, 350);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [slug, slugOk]);
+  const canLaunch = !!chosen && slugOk && taken !== slug && captionOk && dareOk && !busy && !!FACTORY;
   const missing = !FACTORY
     ? "Setup required: EXPO_PUBLIC_JUNO_FACTORY"
     : !chosen
       ? "Choose a photo, pick art or paste an https image URL"
       : !slugOk
         ? "Name it: 2–32 lowercase letters, digits or dashes"
+        : taken === slug
+          ? "A post with that name already exists. Pick another name."
         : !captionOk
           ? "Caption is too long"
           : !dareOk
@@ -127,6 +149,10 @@ export default function PostScreen() {
     setLog([]);
     try {
       await (wallet.address ? Promise.resolve(wallet.address) : wallet.connect());
+      if (await nameTaken(slug)) {
+        setTaken(slug);
+        throw new Error("A post with that name already exists. Pick another name.");
+      }
       const onProgress = (at: SendProgress) =>
         setStatus(
           at.phase === "checking"
@@ -213,7 +239,7 @@ export default function PostScreen() {
             <Field
               label="Name"
               hint={name.length > 0 && !slugOk ? "2–32 lowercase letters, digits or dashes" : undefined}
-              note={slugOk ? `ticker $${slug.replace(/-/g, "").slice(0, 11).toUpperCase()}` : undefined}
+              note={slugOk ? (taken === slug ? "That name is taken" : `ticker $${slug.replace(/-/g, "").slice(0, 11).toUpperCase()}`) : undefined}
             >
               <TextInput
                 value={name}
@@ -314,6 +340,13 @@ export default function PostScreen() {
 }
 
 const MAX_CAPTION = 400;
+
+/** Whether the factory already has a post with this name (names are keyed by keccak256 of the slug). */
+async function nameTaken(slug: string): Promise<boolean> {
+  if (!FACTORY) return false;
+  const post = (await fujiClient().readContract({ address: FACTORY as Address, abi: factoryAbi, functionName: "postBySlug", args: [keccak256(toBytes(slug))] })) as Address;
+  return post !== zeroAddress;
+}
 
 /** Your own photo (camera or library) first, Juno's art as a grid below it, then the pick previewed square. */
 function MediaPicker({

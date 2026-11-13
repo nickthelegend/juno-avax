@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import styled from "styled-components/native";
 
@@ -24,9 +25,15 @@ export type ApprovalRequest = {
  * what it does, where it goes and what it costs, and nothing is signed until Approve is tapped. Reject cancels the
  * step with no transaction sent.
  */
-export function ApproveSheet({ request, onAnswer }: { request: ApprovalRequest | null; onAnswer: (approved: boolean) => void }) {
+export function ApproveSheet({ request: live, onAnswer }: { request: ApprovalRequest | null; onAnswer: (approved: boolean) => void }) {
+  // The last request stays rendered while the sheet slides away: emptying it mid-close changed the sheet's height,
+  // which interrupted the closing animation and left the backdrop on screen.
+  const [request, setShown] = useState<ApprovalRequest | null>(live);
+  useEffect(() => {
+    if (live) setShown(live);
+  }, [live]);
   return (
-    <BottomSheet visible={!!request} onClose={() => onAnswer(false)}>
+    <BottomSheet visible={!!live} onClose={() => onAnswer(false)}>
       {request ? (
         <Body_>
           <Head>
