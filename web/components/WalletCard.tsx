@@ -4,7 +4,9 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 
 import { Tappable } from "./Press";
 import { Button } from "./kit";
-import { juno } from "../lib/api";
+import { fujiClient, juno } from "../lib/api";
+import { factoryAbi, postAbi } from "@juno/sdk";
+import { FACTORY } from "../lib/chain";
 import { displayAddress, explorer, FAUCET_URL, NETWORK_NAME } from "../lib/chain";
 import { useApi } from "../lib/useApi";
 import { canGetGas } from "../lib/gas";
@@ -25,7 +27,14 @@ import { theme } from "../theme";
 export function WalletCard({ address }: { address: string }) {
   const revision = useFeedRevision();
   const balances = useApi(() => juno.balances(address), [address, revision]);
-  const held = useApi(() => juno.portfolio(address).then((p) => p.positions.filter((x) => x.balance > 0).length), [address, revision]);
+  // Posts held: one balanceOf per post, read in parallel (the full portfolio read is too slow for this card on a phone).
+  const held = useApi(async () => {
+    if (!FACTORY) return null;
+    const client = fujiClient();
+    const posts = (await client.readContract({ address: FACTORY as `0x${string}`, abi: factoryAbi, functionName: "posts" })) as readonly `0x${string}`[];
+    const balances = await Promise.all(posts.map((post) => client.readContract({ address: post, abi: postAbi, functionName: "balanceOf", args: [address as `0x${string}`] }) as Promise<bigint>));
+    return balances.filter((b) => b > 0n).length;
+  }, [address, revision]);
   const wallet = useWallet();
   const starter = useApi(() => canGetGas(address as `0x${string}`), [address, revision, wallet.gas.phase]);
   const [copied, setCopied] = useState(false);
@@ -73,7 +82,7 @@ export function WalletCard({ address }: { address: string }) {
         </View>
         <View style={styles.rule} />
         <View style={styles.balance}>
-          <Text style={styles.amount}>{held.loading ? "…" : held.data === null ? "—" : String(held.data)}</Text>
+          <Text style={styles.amount}>{held.data === null || held.data === undefined ? (held.loading ? "…" : "—") : String(held.data)}</Text>
           <Text style={styles.unit}>posts held</Text>
         </View>
       </View>
