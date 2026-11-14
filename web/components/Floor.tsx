@@ -489,67 +489,151 @@ export function AuctionCard({ coin, onChanged }: { coin: Coin; onChanged: () => 
   const units = Math.max(0, Math.floor(Number(amount) || 0));
   const priceNum = Number(maxPrice) || 0;
   const spend = units * priceNum;
+  const escrow = Number(BID_ESCROW) / 1e18;
+
+  const left = n.phase === "commit" ? commitLeft : n.phase === "reveal" ? revealLeft : 0;
+  const span = n.phase === "commit" ? n.commitEndMs - n.openedMs : n.phase === "reveal" ? n.revealEndMs - n.commitEndMs : 1;
+  const elapsed = left === null || !(span > 0) ? 0 : Math.min(1, Math.max(0, 1 - (left * 1000) / span));
+  const stepNo = n.phase === "commit" ? 1 : n.phase === "reveal" ? 2 : 3;
+  const sealedMine = !!(mine && mineOnChain?.exists);
 
   return (
-    <View style={f.card}>
-      <Row justify="space-between">
-        <Row>
-          <SealGlyph />
-          <Text style={f.title}>Sealed-bid opening</Text>
-        </Row>
-        <View style={f.clock}>
-          <Text style={f.clockText}>
-            {n.phase === "commit" && commitLeft !== null
-              ? `Bids close ${clock(commitLeft)}`
-              : n.phase === "reveal" && revealLeft !== null
-                ? `Reveals close ${clock(revealLeft)}`
-                : "Ready to settle"}
+    <View>
+      {/* The clock: where the opening is, how long is left, how many have bid. */}
+      <View style={f.stage}>
+        <View style={f.stageHead}>
+          <View style={f.livePill}>
+            <View style={f.liveDot} />
+            <Text style={f.liveText}>Sealed-bid opening</Text>
+          </View>
+          <Text style={f.stageStep}>Step {stepNo} of 3</Text>
+        </View>
+        <View style={f.clockRow}>
+          <Text style={f.clockBig}>{n.phase === "settle" ? "0:00" : left !== null ? clock(left) : "…"}</Text>
+          <Text style={f.clockNote}>
+            {n.phase === "commit" ? "until bids close" : n.phase === "reveal" ? "until reveals close" : "Bids and reveals are in. Ready to settle."}
           </Text>
         </View>
-      </Row>
-      <PhaseTrack phase={n.phase} />
-      <View style={f.tiles}>
-        <Tile label="Sealed bids" value={String(n.sealedBids)} on />
-        <Tile label="Revealed" value={String(n.revealedBids)} />
-        <Tile label="For sale" value="200" />
+        <View style={f.stageBar}>
+          <View style={[f.stageFill, { width: `${Math.round((n.phase === "settle" ? 1 : elapsed) * 100)}%` }]} />
+        </View>
+        <View style={f.stageStats}>
+          <StageStat value={String(n.sealedBids)} label={n.sealedBids === 1 ? "sealed bid" : "sealed bids"} lit />
+          <View style={f.stageRule} />
+          <StageStat value={String(n.revealedBids)} label="revealed" />
+          <View style={f.stageRule} />
+          <StageStat value="200" label="tokens for sale" />
+        </View>
       </View>
-      <Text style={f.body}>
-        {n.phase === "commit"
-          ? "Bids are sealed: the same 0.005 AVAX escrow and only a hash on chain. Winners all pay one price."
-          : n.phase === "reveal"
-            ? "Bidders reveal amount, max price and salt. A bid that is never revealed is refunded minus 1%."
-            : "Bidding and reveals are over. Anyone can settle: winners get tokens at one price, and unused escrow is claimable."}
-      </Text>
 
-      {n.phase === "commit" ? (
-        mine && mineOnChain?.exists ? (
-          <Text style={f.mine}>
-            Your sealed bid: {mine.amount} tokens at up to {amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. The salt stays on this device until you reveal.
-          </Text>
-        ) : busy || done === "Bid" ? (
-          <Text style={f.mine}>{busy ? "Placing your sealed bid…" : "Sealed bid placed. Reading it back from Fuji…"}</Text>
-        ) : mineOnChain?.exists ? (
-          <Text style={f.mine}>This account already has a sealed bid here, placed from another browser.</Text>
+      {/* How it works, in one line, then the four steps. */}
+      <View style={f.how}>
+        <SealGlyph size={18} />
+        <Text style={f.howText}>Bids stay hidden until the reveal, and every winner pays the same price.</Text>
+      </View>
+      <PhaseTrack phase={n.phase} />
+
+      {/* The action for this step, with its states. */}
+      <View style={f.card}>
+        {n.phase === "commit" ? (
+          sealedMine ? (
+            <Sealed
+              title="Your bid is sealed"
+              detail={`${mine!.amount} tokens at up to ${amountOf(Number(mine!.maxPrice) / 1e18, "AVAX")} each. Only a hash is on chain; the salt stays on this device until you reveal.`}
+            />
+          ) : busy || done === "Bid" ? (
+            <Sealed title={busy ? "Sealing your bid…" : "Bid sealed"} detail={busy ? "Approve it in your Juno wallet." : "Reading it back from Fuji…"} pending={busy} />
+          ) : mineOnChain?.exists ? (
+            <Sealed title="You already bid here" detail="This account placed a sealed bid from another device." />
+          ) : (
+            <>
+              <Text style={f.title}>Place a sealed bid</Text>
+              <View style={f.quick}>
+                {[25, 50, 100, 200].map((q) => {
+                  const on = units === q;
+                  return (
+                    <Pressable key={q} onPress={() => setAmount(String(q))} style={[f.quickChip, on ? f.quickOn : null]} accessibilityRole="button" accessibilityLabel={`${q} tokens`}>
+                      <Text style={[f.quickText, on ? { color: c.lime } : null]}>{q}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={f.inputs}>
+                <Field label="Tokens" value={amount} onChange={setAmount} />
+                <Field label="Max AVAX each" value={maxPrice} onChange={setMaxPrice} />
+              </View>
+              <View style={f.sum}>
+                <SumRow label="Escrow, the same for every bid" value={`${escrow} AVAX`} />
+                <SumRow label="Most you can pay" value={spend > 0 ? amountOf(spend, "AVAX") : "—"} tone={spend > escrow ? "neg" : undefined} />
+                <SumRow label="Comes back to you" value={spend > 0 && spend <= escrow ? `at least ${amountOf(escrow - spend, "AVAX")}` : "—"} />
+              </View>
+              {spend > escrow ? <Text style={[f.hint, { color: c.neg }]}>Tokens × max price must fit inside the 0.005 AVAX escrow.</Text> : null}
+              <Button label="Place sealed bid" variant="lime" tall onPress={() => void commit()} loading={busy} disabled={spend > escrow || units === 0} />
+            </>
+          )
+        ) : n.phase === "reveal" ? (
+          mineOnChain?.revealed || done === "Reveal" ? (
+            <Sealed title="Bid revealed" detail="Settlement opens when the clock runs out. Anyone can settle." open />
+          ) : (
+            <>
+              <Text style={f.title}>{mine ? "Reveal your bid" : "Reveals are open"}</Text>
+              <Text style={f.body}>
+                {mine
+                  ? `Opens your ${mine.amount} tokens at up to ${amountOf(Number(mine.maxPrice) / 1e18, "AVAX")}. A bid never revealed is refunded minus 1%.`
+                  : mineOnChain?.exists
+                    ? "Your bid's secret is on another device; reveal it there."
+                    : "Bidders now reveal amount, max price and salt. This account has no bid here."}
+              </Text>
+              <Button label={mine ? "Reveal my bid" : "No bid to reveal"} variant="ink" tall disabled={!mine} onPress={() => void reveal()} loading={busy} />
+            </>
+          )
         ) : (
           <>
-            <View style={f.inputs}>
-              <Field label="Tokens" value={amount} onChange={setAmount} />
-              <Field label="Max AVAX each" value={maxPrice} onChange={setMaxPrice} />
-            </View>
-            <Text style={[f.hint, spend > 0.005 ? { color: c.neg } : null]}>
-              {spend > 0 ? `Up to ${amountOf(spend, "AVAX")} of your 0.005 AVAX escrow; the rest comes back.` : "Tokens × max price must fit inside the escrow."}
+            <Text style={f.title}>{done === "Settle" ? "Settled" : "Settle the opening"}</Text>
+            <Text style={f.body}>
+              {done === "Settle"
+                ? "Winners got their tokens at one price. Opening the curve…"
+                : "Anyone can settle: winners get tokens at one clearing price, half of it seeds the floor, and unused escrow is claimable."}
             </Text>
-            <Button label="Place sealed bid · 0.005 AVAX escrow" variant="lime" tall onPress={() => void commit()} loading={busy} />
+            <Button label={done === "Settle" ? "Settled · opening the curve…" : "Settle the auction"} variant="lime" tall disabled={done === "Settle"} onPress={() => void settle()} loading={busy} />
           </>
-        )
-      ) : n.phase === "reveal" ? (
-        <Button label={mine ? "Reveal my bid" : mineOnChain?.exists ? "Your bid's secret is in another browser" : "No bid from this account"} variant="ink" tall disabled={!mine || mineOnChain?.revealed === true || done === "Reveal"} onPress={() => void reveal()} loading={busy} />
-      ) : (
-        <Button label={done === "Settle" ? "Settled · opening the curve…" : "Settle the auction"} variant="lime" tall disabled={done === "Settle"} onPress={() => void settle()} loading={busy} />
-      )}
-      {(mineOnChain?.revealed || done === "Reveal") && n.phase === "reveal" ? <Text style={f.mine}>Revealed. Settlement opens when the clock runs out.</Text> : null}
-      {error ? <Text style={f.error}>{error}</Text> : null}
-      {hash ? <TxLink hash={hash.hash} ms={hash.ms} /> : null}
+        )}
+        {error ? <Text style={f.error}>{error}</Text> : null}
+        {hash ? <TxLink hash={hash.hash} ms={hash.ms} /> : null}
+      </View>
+    </View>
+  );
+}
+
+function StageStat({ value, label, lit }: { value: string; label: string; lit?: boolean }) {
+  return (
+    <View style={{ flex: 1, gap: 1 }}>
+      <Text style={[f.stageValue, lit ? { color: c.lime } : null]}>{value}</Text>
+      <Text style={f.stageLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function SumRow({ label, value, tone }: { label: string; value: string; tone?: "neg" }) {
+  return (
+    <View style={f.sumRow}>
+      <Text style={f.sumLabel}>{label}</Text>
+      <Text style={[f.sumValue, tone === "neg" ? { color: c.neg } : null]}>{value}</Text>
+    </View>
+  );
+}
+
+/** A bid's state, drawn as the envelope it is. */
+function Sealed({ title, detail, pending, open }: { title: string; detail: string; pending?: boolean; open?: boolean }) {
+  return (
+    <View style={f.sealed}>
+      <View style={[f.sealedDisc, open ? { backgroundColor: c.limeSoft } : null]}>
+        <Object3D art="envelope" alt="" size={54} float={pending} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+        <Text style={f.sealedTitle}>{title}</Text>
+        <Text style={f.body}>{detail}</Text>
+      </View>
     </View>
   );
 }
@@ -802,6 +886,34 @@ const s = StyleSheet.create({
 
 const f = StyleSheet.create({
   card: { backgroundColor: c.surface, borderRadius: theme.radius.lg, padding: 16, gap: 12, alignSelf: "stretch", marginTop: 16 },
+  stage: { backgroundColor: c.ink, borderRadius: theme.radius.xl, padding: 20, gap: 12, marginTop: 14, ...theme.shadow.raised },
+  stageHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  livePill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: c.inkSoft },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.lime },
+  liveText: { color: c.onInk, fontSize: theme.type.caption.size, fontWeight: "700" },
+  stageStep: { color: "#A9B3A2", fontSize: theme.type.caption.size, fontWeight: "700", ...tabular },
+  clockRow: { gap: 2 },
+  clockBig: { color: c.lime, fontSize: 56, lineHeight: 60, letterSpacing: -2, fontWeight: "800", ...tabular },
+  clockNote: { color: c.onInk, fontSize: theme.type.label.size, fontWeight: "600" },
+  stageBar: { height: 6, borderRadius: 3, backgroundColor: c.inkSoft, overflow: "hidden" },
+  stageFill: { height: 6, borderRadius: 3, backgroundColor: c.lime },
+  stageStats: { flexDirection: "row", paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(243,247,238,0.16)" },
+  stageRule: { width: StyleSheet.hairlineWidth, backgroundColor: "rgba(243,247,238,0.16)", marginHorizontal: 12 },
+  stageValue: { color: c.onInk, fontSize: theme.type.heading.size, fontWeight: "800", letterSpacing: -0.5, ...tabular },
+  stageLabel: { color: "#A9B3A2", fontSize: theme.type.caption.size, fontWeight: "600" },
+  how: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: theme.radius.md, backgroundColor: c.limeSoft },
+  howText: { flex: 1, color: c.text, fontSize: theme.type.label.size, fontWeight: "600", lineHeight: 19 },
+  quick: { flexDirection: "row", gap: 8 },
+  quickChip: { flex: 1, height: 38, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceAlt },
+  quickOn: { backgroundColor: c.ink },
+  quickText: { color: c.text, fontSize: theme.type.label.size, fontWeight: "800", ...tabular },
+  sum: { gap: 8, padding: 12, borderRadius: theme.radius.md, backgroundColor: c.surfaceAlt },
+  sumRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  sumLabel: { flexShrink: 1, color: c.muted, fontSize: theme.type.caption.size, fontWeight: "600" },
+  sumValue: { color: c.text, fontSize: theme.type.label.size, fontWeight: "800", ...tabular },
+  sealed: { flexDirection: "row", alignItems: "center", gap: 14 },
+  sealedDisc: { width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceAlt },
+  sealedTitle: { color: c.text, fontSize: theme.type.title.size, fontWeight: "800", letterSpacing: -0.4 },
   title: { color: c.text, fontSize: theme.type.title.size, fontWeight: "700", letterSpacing: -0.4 },
   kicker: { color: c.muted, fontSize: theme.type.caption.size, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
   dare: { color: c.text, fontSize: theme.type.lead.size, fontWeight: "700", letterSpacing: -0.2, lineHeight: 24 },

@@ -4,93 +4,104 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 
 import { Tappable } from "./Press";
 import { Button } from "./kit";
-import { fujiClient, juno } from "../lib/api";
-import { factoryAbi, postAbi } from "@juno/sdk";
-import { FACTORY } from "../lib/chain";
-import { displayAddress, explorer, FAUCET_URL, NETWORK_NAME } from "../lib/chain";
-import { useApi } from "../lib/useApi";
+import { juno } from "../lib/api";
+import { explorer, FAUCET_URL, NETWORK_NAME } from "../lib/chain";
+import { money, useApi } from "../lib/useApi";
 import { canGetGas } from "../lib/gas";
 import { useWallet } from "../lib/wallet";
 import { useFeedRevision } from "../lib/refresh";
 import { theme } from "../theme";
 
 /**
- * The account itself: its address, what it holds, and how to fund it.
+ * The account, as one ink statement: what it is worth, what that is made of,
+ * and how to fund it.
  *
- * The card shows the AVAX balance and how many posts this account holds, read
- * from Fuji. A brand-new, empty account gets its starter test AVAX from
- * Juno's gas sponsor in one tap; after that the card links to the Core faucet.
+ * Total value is the AVAX in the account plus its post coins at their spot
+ * price on the curve, both read from Fuji. If either read is missing the total
+ * is a dash, never a partial sum shown as if it were whole: a total that left
+ * out the coins would read as a loss nobody took.
  *
- * Balances are shown as a dash when the read fails, never as zero.
+ * A brand-new, empty account gets its starter test AVAX from Juno's gas
+ * station in one tap; after that the card links to the Core faucet.
  */
-
-export function WalletCard({ address }: { address: string }) {
+export function WalletCard({
+  address,
+  holdings,
+  pnl,
+  pnlPct,
+  loading,
+}: {
+  address: string;
+  /** The post coins at spot, in AVAX. Null when the read failed or did not finish. */
+  holdings: number | null | undefined;
+  pnl: number | null;
+  pnlPct: number | null | undefined;
+  loading: boolean;
+}) {
   const revision = useFeedRevision();
   const balances = useApi(() => juno.balances(address), [address, revision]);
-  // Posts held: one balanceOf per post, read in parallel (the full portfolio read is too slow for this card on a phone).
-  const held = useApi(async () => {
-    if (!FACTORY) return null;
-    const client = fujiClient();
-    const posts = (await client.readContract({ address: FACTORY as `0x${string}`, abi: factoryAbi, functionName: "posts" })) as readonly `0x${string}`[];
-    const balances = await Promise.all(posts.map((post) => client.readContract({ address: post, abi: postAbi, functionName: "balanceOf", args: [address as `0x${string}`] }) as Promise<bigint>));
-    return balances.filter((b) => b > 0n).length;
-  }, [address, revision]);
   const wallet = useWallet();
   const starter = useApi(() => canGetGas(address as `0x${string}`), [address, revision, wallet.gas.phase]);
   const [copied, setCopied] = useState(false);
-  const shown = displayAddress(address);
 
   const copy = async () => {
-    await Clipboard.setStringAsync(shown);
+    await Clipboard.setStringAsync(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1400);
   };
 
-  const figure = (value: number | null | undefined) =>
-    balances.loading
-      ? "…"
-      : value === null || value === undefined || balances.error
-        ? "—"
-        : value.toFixed(value === 0 ? 2 : value < 1 ? 4 : 2);
-
-  const empty = balances.data?.avax !== null && balances.data?.avax !== undefined && balances.data.avax < 0.006;
+  const avax = balances.error ? null : (balances.data?.avax ?? null);
+  const total = avax !== null && holdings !== null && holdings !== undefined ? avax + holdings : null;
+  const figure = (value: number | null, busy: boolean) => (busy ? "…" : value === null ? "—" : fixed(value));
+  const empty = avax !== null && avax < 0.006;
+  const up = pnlPct !== null && pnlPct !== undefined && Number.isFinite(pnlPct) ? pnlPct >= 0 : null;
 
   return (
     <View style={styles.card}>
       <View style={styles.head}>
-        <Text style={styles.label}>Account · {NETWORK_NAME}</Text>
-        <Tappable onPress={() => void copy()} to={0.95} accessibilityRole="button" accessibilityLabel="Copy address">
-          <View style={styles.copy}>
-            <Text style={styles.copyText}>{copied ? "Copied" : "Copy address"}</Text>
-          </View>
-        </Tappable>
+        <Text style={styles.kicker}>Total value</Text>
+        <View style={styles.live}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>{NETWORK_NAME}</Text>
+        </View>
       </View>
-      <Text
-        style={styles.address}
-        selectable
-        numberOfLines={1}
-        ellipsizeMode="middle"
-        onPress={() => void Linking.openURL(explorer("address", address))}
-      >
-        {shown}
-      </Text>
 
-      <View style={styles.balances}>
-        <View style={styles.balance}>
-          <Text style={styles.amount}>{figure(balances.data?.avax)}</Text>
-          <Text style={styles.unit}>AVAX</Text>
+      <View style={styles.totalRow}>
+        <Text style={styles.total} numberOfLines={1} adjustsFontSizeToFit>
+          {figure(total, balances.loading || loading)}
+        </Text>
+        <Text style={styles.totalUnit}>AVAX</Text>
+      </View>
+
+      <View style={styles.pnlRow}>
+        {up === null ? (
+          <Text style={styles.pnlNone}>No P&amp;L yet: it starts with your first buy</Text>
+        ) : (
+          <>
+            <View style={[styles.pnlBadge, { backgroundColor: up ? "rgba(214,255,61,0.16)" : "rgba(217,45,32,0.22)" }]}>
+              <Text style={[styles.pnlBadgeText, { color: up ? theme.colors.lime : "#FF8A80" }]}>
+                {up ? "▲ +" : "▼ "}
+                {((pnlPct ?? 0) * 100).toFixed(1)}%
+              </Text>
+            </View>
+            <Text style={styles.pnlNote}>{pnl === null ? "on your coins" : `${pnl >= 0 ? "+" : ""}${money(pnl, "AVAX")} on your coins`}</Text>
+          </>
+        )}
+      </View>
+
+      <View style={styles.split}>
+        <View style={styles.cell}>
+          <Text style={styles.cellLabel}>AVAX balance</Text>
+          <Text style={styles.cellValue}>{figure(avax, balances.loading)}</Text>
         </View>
         <View style={styles.rule} />
-        <View style={styles.balance}>
-          <Text style={styles.amount}>{held.data === null || held.data === undefined ? (held.loading ? "…" : "—") : String(held.data)}</Text>
-          <Text style={styles.unit}>posts held</Text>
+        <View style={styles.cell}>
+          <Text style={styles.cellLabel}>In post coins</Text>
+          <Text style={styles.cellValue}>{figure(holdings ?? null, loading)}</Text>
         </View>
       </View>
 
-      {empty ? (
-        <Text style={styles.hint}>A sealed bid escrows 0.005 AVAX, and every call needs a little gas.</Text>
-      ) : null}
-
+      {empty ? <Text style={styles.hint}>A sealed bid escrows 0.005 AVAX, and every call needs a little gas.</Text> : null}
       {wallet.gas.phase === "done" && wallet.gas.hash ? (
         <Text style={styles.hint}>
           {wallet.gas.amount} AVAX from Juno&apos;s gas station ·{" "}
@@ -99,56 +110,86 @@ export function WalletCard({ address }: { address: string }) {
           </Text>
         </Text>
       ) : null}
-      {wallet.gas.phase === "failed" && wallet.gas.error ? <Text style={[styles.message, { color: theme.colors.neg }]}>{wallet.gas.error}</Text> : null}
+      {wallet.gas.phase === "failed" && wallet.gas.error ? <Text style={styles.error}>{wallet.gas.error}</Text> : null}
 
-      {wallet.gas.phase === "asking" ? (
-        <Button label="Getting test AVAX…" variant="lime" disabled onPress={() => undefined} />
-      ) : starter.data && wallet.gas.phase !== "failed" ? (
-        <Button label="Get free test AVAX" variant="lime" onPress={() => void wallet.getGas()} />
-      ) : (
-        <Button label="Get test AVAX" variant={empty ? "lime" : "quiet"} onPress={() => void Linking.openURL(FAUCET_URL)} />
-      )}
+      <View style={styles.actions}>
+        {wallet.gas.phase === "asking" ? (
+          <Button label="Getting test AVAX…" variant="lime" disabled onPress={() => undefined} style={styles.action} />
+        ) : starter.data && wallet.gas.phase !== "failed" ? (
+          <Button label="Get free test AVAX" variant="lime" onPress={() => void wallet.getGas()} style={styles.action} />
+        ) : (
+          <Button label="Add test AVAX" variant="lime" onPress={() => void Linking.openURL(FAUCET_URL)} style={styles.action} />
+        )}
+        <Tappable onPress={() => void copy()} to={0.95} accessibilityRole="button" accessibilityLabel="Copy address">
+          <View style={styles.ghost}>
+            <Text style={styles.ghostText}>{copied ? "Copied" : "Copy address"}</Text>
+          </View>
+        </Tappable>
+      </View>
     </View>
   );
 }
 
+function fixed(value: number): string {
+  if (value === 0) return "0.00";
+  return value < 1 ? value.toFixed(5) : value.toFixed(3);
+}
+
+const ON_INK_MUTED = "#A9B3A2";
+
 const styles = StyleSheet.create({
   card: {
-    borderRadius: theme.radius.lg,
-    backgroundColor: theme.colors.surface,
-    padding: 16,
-    gap: 12,
-    ...theme.shadow.card,
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.ink,
+    padding: 20,
+    gap: 10,
+    ...theme.shadow.raised,
   },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  label: { fontSize: 12, fontWeight: "700", color: theme.colors.muted, letterSpacing: 0.2 },
-  copy: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: theme.colors.surfaceAlt },
-  copyText: { fontSize: 12, fontWeight: "700", color: theme.colors.text },
-  address: { fontSize: 13, fontWeight: "600", color: theme.colors.text, fontVariant: ["tabular-nums"] },
-  balances: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceAlt,
+  kicker: { fontSize: theme.type.label.size, fontWeight: "600", color: ON_INK_MUTED },
+  live: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: theme.colors.inkSoft },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.lime },
+  liveText: { fontSize: theme.type.micro.size, fontWeight: "700", color: ON_INK_MUTED },
+  totalRow: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  total: {
+    flexShrink: 1,
+    fontSize: theme.type.display.size,
+    lineHeight: theme.type.display.height + 4,
+    letterSpacing: theme.type.display.tracking,
+    fontWeight: "800",
+    color: theme.colors.lime,
+    fontVariant: ["tabular-nums"],
   },
-  balance: { flex: 1, flexDirection: "row", alignItems: "baseline", gap: 6 },
-  amount: { fontSize: 20, fontWeight: "800", color: theme.colors.text, fontVariant: ["tabular-nums"] },
-  unit: { fontSize: 12, fontWeight: "700", color: theme.colors.muted },
-  rule: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: theme.colors.lineStrong, marginHorizontal: 12 },
-  hint: { fontSize: 13, lineHeight: 18, color: theme.colors.muted },
-  message: { fontSize: 13, lineHeight: 18 },
-  link: { fontWeight: "800", color: theme.colors.focus },
-  name: { fontSize: 17, fontWeight: "800", color: theme.colors.text, marginTop: 2 },
-  choose: { backgroundColor: theme.colors.lime },
-  nameRow: {
+  totalUnit: { fontSize: theme.type.title.size, fontWeight: "700", color: theme.colors.onInk },
+  pnlRow: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 24 },
+  pnlBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
+  pnlBadgeText: { fontSize: theme.type.caption.size, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  pnlNote: { fontSize: theme.type.caption.size, fontWeight: "600", color: ON_INK_MUTED, fontVariant: ["tabular-nums"] },
+  pnlNone: { fontSize: theme.type.caption.size, fontWeight: "600", color: ON_INK_MUTED },
+  split: {
     flexDirection: "row",
-    alignItems: "center",
-    height: 46,
-    paddingHorizontal: 14,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceAlt,
+    marginTop: 4,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(243,247,238,0.16)",
   },
-  at: { fontSize: 16, fontWeight: "800", color: theme.colors.muted, marginRight: 2 },
-  nameInput: { flex: 1, fontSize: 16, fontWeight: "700", color: theme.colors.text },
+  cell: { flex: 1, gap: 3 },
+  cellLabel: { fontSize: theme.type.caption.size, fontWeight: "600", color: ON_INK_MUTED },
+  cellValue: { fontSize: theme.type.title.size, fontWeight: "800", color: theme.colors.onInk, letterSpacing: -0.3, fontVariant: ["tabular-nums"] },
+  rule: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "rgba(243,247,238,0.16)", marginHorizontal: 14 },
+  hint: { fontSize: 13, lineHeight: 18, color: ON_INK_MUTED },
+  error: { fontSize: 13, lineHeight: 18, color: "#FF8A80" },
+  link: { fontWeight: "800", color: theme.colors.lime },
+  actions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 6 },
+  action: { flex: 1 },
+  ghost: {
+    height: 48,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(243,247,238,0.22)",
+  },
+  ghostText: { fontSize: theme.type.label.size, fontWeight: "700", color: theme.colors.onInk },
 });
