@@ -55,7 +55,7 @@ A mainnet deploy script is ready, with its cost read from mainnet, and has not b
 
 - Repo: https://github.com/nickthelegend/juno-avax
 - Live app: https://juno-avax.vercel.app (Fuji testnet)
-- iOS Simulator app: https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip (SHA-256 `29d59ce70b55742944094870f28384684bf1020bf54be7b9a38954258a3aff3b`; `xcrun simctl install booted Juno.app`)
+- iOS Simulator app: https://juno-avax.vercel.app/download/Juno-iOS-Simulator.zip (SHA-256 `6fd4c4f6be5fe2fe2d336d98c35556699e65395e805bc3fe76c1b120fbefacd1`; `xcrun simctl install booted Juno.app`)
 - Demo video (2:58, v14, the ≤3:00 submission cut): (upload link — Nick to add). Local file: `grokbot/videos/juno-avax/juno-avax-film.mp4` (1080p) and `juno-avax-film-share.mp4` (720p, 9.2 MB). Opens on the landing (with the sourced Why Juno comparison: pump.fun-style launchpads, Zora/Base coins, Friend.tech keys), then one live take on Fuji (Nov 13–14) on the iOS Simulator build: a Juno wallet that asks for approval before every transaction, a real photo from the camera roll stored on Fuji (JunoMedia) and launched as COOL-CAT, a one-minute sealed-bid opening with two demo bidders, reveal, settle at one price, buy and redeem against the floor (each proven on Snowtrace), Ask Juno AI, and Kai hiding his bag with eERC (shield vs private send on Snowtrace).
 - Full walkthrough (5:33): `grokbot/videos/juno-avax/juno-avax-walkthrough.mp4` (adds the download, the store tx, claim, sell and the auditor).
 - Slides: `docs/SLIDES.md`
