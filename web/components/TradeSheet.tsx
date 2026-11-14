@@ -9,7 +9,7 @@ import { juno, type Coin, type SwapQuote } from "../lib/api";
 import { describeTxError, explorer, EXPLORER_NAME, NETWORK_NAME } from "../lib/chain";
 import { seconds } from "../lib/finality";
 import { money, tokens } from "../lib/useApi";
-import { useWallet, type SendProgress } from "../lib/wallet";
+import { useWallet, type SendProgress, ApprovalOutlet } from "../lib/wallet";
 import { theme } from "../theme";
 
 /**
@@ -375,6 +375,7 @@ export function TradeSheet({
           </>
         )}
       </Sheet>
+      <ApprovalOutlet />
     </Modal>
   );
 }

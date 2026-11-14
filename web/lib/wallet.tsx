@@ -1,3 +1,5 @@
+import { StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { decodeErrorResult, encodeFunctionData, formatEther, type Abi, type Address, type Hex } from "viem";
 import { client as sdkClient, factoryAbi, FUJI_RPC, mediaAbi, postAbi } from "@juno/sdk";
@@ -87,6 +89,10 @@ export type WalletState = {
   gas: GasState;
   /** Ask Juno's gas sponsor for this account's starter AVAX (once per wallet, only while empty). */
   getGas: () => Promise<void>;
+  /** The Juno wallet's pending approval, for a screen presented as its own Modal to show (see ApprovalOutlet). */
+  approval: ApprovalRequest | null;
+  answerApproval: (approved: boolean) => void;
+  hostApprovals: () => () => void;
   connect: () => Promise<string>;
   disconnect: () => Promise<void>;
 };
@@ -140,6 +146,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const pending = useRef<{ resolve: (address: string) => void; reject: (error: Error) => void } | null>(null);
   // The Juno wallet asks before it signs anything (Core and MetaMask show their own window instead).
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
+  // A Modal screen (the trade sheet) covers the root view, so while one is open it shows the approval itself.
+  const [hosts, setHosts] = useState(0);
+  const hostApprovals = useCallback(() => {
+    setHosts((n) => n + 1);
+    return () => setHosts((n) => n - 1);
+  }, []);
+  const answerApproval = useCallback((approved: boolean) => answer.current?.(approved), []);
   const answer = useRef<((approved: boolean) => void) | null>(null);
   const approve = useCallback(
     (request: ApprovalRequest) =>
@@ -355,15 +368,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<WalletState>(
-    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, signMessage, local, gas, getGas: requestStarterGas, connect, disconnect }),
-    [address, ready, signing, walletName, send, signMessage, local, gas, requestStarterGas, connect, disconnect],
+    () => ({ address, ready, signing, walletName, via: address ? "wallet" : null, send, signMessage, local, gas, getGas: requestStarterGas, connect, disconnect, approval, answerApproval, hostApprovals }),
+    [address, ready, signing, walletName, send, signMessage, local, gas, requestStarterGas, connect, disconnect, approval, answerApproval, hostApprovals],
   );
 
   return (
     <WalletContext.Provider value={value}>
       {children}
       <SignInSheet visible={signingIn} onClose={cancelSignIn} bridge={bridge} />
-      <ApproveSheet request={approval} onAnswer={(approved) => answer.current?.(approved)} />
+      <ApproveSheet request={hosts > 0 ? null : approval} onAnswer={answerApproval} />
     </WalletContext.Provider>
   );
 }
@@ -398,4 +411,20 @@ async function txRequest(account: string, step: TxStep, value: bigint, data: Hex
     .catch(() => "set by Fuji when sent");
   rows.push({ label: "Network fee", value: fee.endsWith("AVAX") ? `about ${fee}` : fee });
   return { kind: "tx", title: step.label, account, rows };
+}
+
+/** Renders the Juno wallet's approval sheet inside a screen that is its own Modal (it would be hidden behind it). */
+export function ApprovalOutlet() {
+  const wallet = useWallet();
+  const { hostApprovals } = wallet;
+  useEffect(() => hostApprovals(), [hostApprovals]);
+  const shown = useRef(false);
+  // A Modal is its own native window: gestures inside it need their own root (the sheet can be dragged down).
+  if (!wallet.approval && !shown.current) return null;
+  shown.current = !!wallet.approval;
+  return (
+    <GestureHandlerRootView style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <ApproveSheet request={wallet.approval} onAnswer={wallet.answerApproval} />
+    </GestureHandlerRootView>
+  );
 }
